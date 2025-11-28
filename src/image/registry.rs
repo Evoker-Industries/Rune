@@ -308,8 +308,8 @@ impl Registry {
             .ok_or_else(|| RuneError::Image("No upload location provided".to_string()))?
             .to_string();
 
-        // Calculate digest
-        let digest = format!("sha256:{:x}", sha256_digest(&data));
+        // Calculate digest using cryptographic SHA-256
+        let digest = sha256_digest(&data);
 
         // Complete upload
         let url = format!("{}&digest={}", upload_url, digest);
@@ -421,13 +421,13 @@ struct TagsResponse {
     tags: Vec<String>,
 }
 
-/// Simple SHA256 hash (placeholder - in production use proper crypto)
-fn sha256_digest(data: &[u8]) -> u64 {
-    use std::hash::{Hash, Hasher};
-    use std::collections::hash_map::DefaultHasher;
-    let mut hasher = DefaultHasher::new();
-    data.hash(&mut hasher);
-    hasher.finish()
+/// Compute SHA256 digest of data using cryptographic hash
+pub fn sha256_digest(data: &[u8]) -> String {
+    use sha2::{Sha256, Digest};
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    let result = hasher.finalize();
+    format!("sha256:{:x}", result)
 }
 
 #[cfg(test)]

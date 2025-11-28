@@ -299,17 +299,22 @@ fn matches_repository(pattern: &str, repository: &str) -> bool {
     pattern == repository
 }
 
-/// Hash password (simple implementation - use bcrypt in production)
+/// Hash password using bcrypt for secure storage
 fn hash_password(password: &str) -> String {
-    use sha2::{Sha256, Digest};
-    let mut hasher = Sha256::new();
-    hasher.update(password.as_bytes());
-    format!("{:x}", hasher.finalize())
+    // Use bcrypt with default cost factor (12)
+    bcrypt::hash(password, bcrypt::DEFAULT_COST)
+        .unwrap_or_else(|_| {
+            // Fallback to SHA-256 if bcrypt fails (should not happen)
+            use sha2::{Sha256, Digest};
+            let mut hasher = Sha256::new();
+            hasher.update(password.as_bytes());
+            format!("{:x}", hasher.finalize())
+        })
 }
 
-/// Verify password
+/// Verify password against bcrypt hash
 fn verify_password(password: &str, hash: &str) -> bool {
-    hash_password(password) == hash
+    bcrypt::verify(password, hash).unwrap_or(false)
 }
 
 /// Base64 encode
