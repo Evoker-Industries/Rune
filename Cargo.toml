@@ -1,0 +1,63 @@
+[package]
+name = "rune"
+version = "0.1.0"
+edition = "2021"
+description = "A Docker-like and Docker-compatible container service with a TUI"
+authors = ["Evoker Industries"]
+license = "MIT"
+
+[dependencies]
+# TUI
+ratatui = "0.29"
+crossterm = "0.28"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Container runtime (Linux-specific)
+nix = { version = "0.29", features = ["process", "sched", "mount", "user", "fs", "signal"] }
+
+# UUID generation
+uuid = { version = "1", features = ["v4"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# HTTP client for Docker API compatibility
+reqwest = { version = "0.12", features = ["json"] }
+
+# OCI image spec
+oci-spec = "0.7"
+
+# Tar archive handling
+tar = "0.4"
+flate2 = "1"
+
+# Directories
+dirs = "6"
+
+[dev-dependencies]
+tempfile = "3"
+
+[[bin]]
+name = "rune"
+path = "src/main.rs"
+
+[[bin]]
+name = "rune-tui"
+path = "src/tui.rs"
