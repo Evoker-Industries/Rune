@@ -5,36 +5,6 @@
 
 use std::io;
 
-/// Linux syscall numbers for x86_64
-#[cfg(target_arch = "x86_64")]
-pub mod nr {
-    pub const CLONE: i64 = 56;
-    pub const UNSHARE: i64 = 272;
-    pub const SETNS: i64 = 308;
-    pub const PIVOT_ROOT: i64 = 155;
-    pub const MOUNT: i64 = 165;
-    pub const UMOUNT2: i64 = 166;
-    pub const SETHOSTNAME: i64 = 170;
-    pub const SETDOMAINNAME: i64 = 171;
-    pub const CHROOT: i64 = 161;
-    pub const PRCTL: i64 = 157;
-}
-
-/// Linux syscall numbers for aarch64
-#[cfg(target_arch = "aarch64")]
-pub mod nr {
-    pub const CLONE: i64 = 220;
-    pub const UNSHARE: i64 = 97;
-    pub const SETNS: i64 = 268;
-    pub const PIVOT_ROOT: i64 = 41;
-    pub const MOUNT: i64 = 40;
-    pub const UMOUNT2: i64 = 39;
-    pub const SETHOSTNAME: i64 = 161;
-    pub const SETDOMAINNAME: i64 = 162;
-    pub const CHROOT: i64 = 51;
-    pub const PRCTL: i64 = 167;
-}
-
 /// Clone flags for namespace creation
 pub mod clone_flags {
     /// Create new mount namespace
@@ -154,10 +124,13 @@ pub fn mount(
 ) -> SyscallResult<()> {
     use std::ffi::CString;
 
-    let source_cstr = source.map(|s| CString::new(s).unwrap());
+    let source_cstr = source.map(|s| CString::new(s)).transpose()
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid source path"))?;
     let target_cstr = CString::new(target).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid target path"))?;
-    let fstype_cstr = fstype.map(|s| CString::new(s).unwrap());
-    let data_cstr = data.map(|s| CString::new(s).unwrap());
+    let fstype_cstr = fstype.map(|s| CString::new(s)).transpose()
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid fstype"))?;
+    let data_cstr = data.map(|s| CString::new(s)).transpose()
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid data"))?;
 
     let source_ptr = source_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(std::ptr::null());
     let fstype_ptr = fstype_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(std::ptr::null());
@@ -283,17 +256,19 @@ pub fn execve(path: &str, args: &[&str], env: &[&str]) -> SyscallResult<()> {
 
     let path_cstr = CString::new(path).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid path"))?;
     
-    let args_cstr: Vec<CString> = args.iter()
-        .map(|s| CString::new(*s).unwrap())
+    let args_cstr: std::result::Result<Vec<CString>, _> = args.iter()
+        .map(|s| CString::new(*s))
         .collect();
+    let args_cstr = args_cstr.map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid argument"))?;
     let mut args_ptr: Vec<*const libc::c_char> = args_cstr.iter()
         .map(|s| s.as_ptr())
         .collect();
     args_ptr.push(std::ptr::null());
 
-    let env_cstr: Vec<CString> = env.iter()
-        .map(|s| CString::new(*s).unwrap())
+    let env_cstr: std::result::Result<Vec<CString>, _> = env.iter()
+        .map(|s| CString::new(*s))
         .collect();
+    let env_cstr = env_cstr.map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid environment variable"))?;
     let mut env_ptr: Vec<*const libc::c_char> = env_cstr.iter()
         .map(|s| s.as_ptr())
         .collect();

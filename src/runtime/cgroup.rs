@@ -248,10 +248,13 @@ impl CgroupManager {
         self.create_cgroup_dir(&container_path)?;
 
         // Enable controllers on the rune cgroup first
-        let _ = self.write_cgroup_file(
+        // This may fail if controllers are already enabled or not available
+        if let Err(e) = self.write_cgroup_file(
             &self.rune_path.join("cgroup.subtree_control"),
             "+cpu +memory +pids +io"
-        );
+        ) {
+            tracing::warn!("Failed to enable cgroup controllers (may already be enabled): {}", e);
+        }
 
         // Memory settings
         if let Some(limit) = config.memory_limit {

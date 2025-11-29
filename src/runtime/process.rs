@@ -388,6 +388,8 @@ impl ContainerExec {
         use std::fs::File;
         use std::os::unix::io::AsRawFd;
 
+        use super::syscall::clone_flags;
+        
         let ns_types = [
             ("user", libc::CLONE_NEWUSER),
             ("mnt", libc::CLONE_NEWNS),
@@ -395,7 +397,7 @@ impl ContainerExec {
             ("ipc", libc::CLONE_NEWIPC),
             ("net", libc::CLONE_NEWNET),
             ("pid", libc::CLONE_NEWPID),
-            ("cgroup", 0x02000000), // CLONE_NEWCGROUP
+            ("cgroup", clone_flags::CLONE_NEWCGROUP),
         ];
 
         for (ns_name, ns_flag) in ns_types {

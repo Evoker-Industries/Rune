@@ -326,8 +326,15 @@ impl MountManager {
             let host_path = format!("/dev/{}", name);
             if Path::new(&host_path).exists() {
                 // Create an empty file to bind mount to
-                if let Ok(_) = fs::File::create(&path) {
-                    let _ = mount(Some(&host_path), &path, None, mount_flags::MS_BIND, None);
+                match fs::File::create(&path) {
+                    Ok(_) => {
+                        if let Err(e) = mount(Some(&host_path), &path, None, mount_flags::MS_BIND, None) {
+                            tracing::warn!("Failed to bind mount device {}: {}", name, e);
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to create device file {}: {}", path, e);
+                    }
                 }
             }
         }
