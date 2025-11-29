@@ -97,4 +97,7 @@ pub enum RuneError {
 
     #[error("Internal error: {0}")]
     Internal(String),
+
+    #[error("Runtime error: {0}")]
+    Runtime(String),
 }

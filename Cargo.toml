@@ -29,8 +29,8 @@ anyhow = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-# Container runtime (Linux-specific)
-nix = { version = "0.29", features = ["process", "sched", "mount", "user", "fs", "signal"] }
+# Low-level system calls (for container runtime)
+libc = "0.2"
 
 # UUID generation
 uuid = { version = "1", features = ["v4"] }
