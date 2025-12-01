@@ -499,6 +499,7 @@ pub struct ExecInstance {
 pub struct ApiHandler {
     container_manager: Arc<ContainerManager>,
     exec_instances: Arc<std::sync::RwLock<std::collections::HashMap<String, ExecInstance>>>,
+    config_manager: Arc<crate::swarm::ConfigManager>,
 }
 
 impl ApiHandler {
@@ -507,6 +508,7 @@ impl ApiHandler {
         Self {
             container_manager,
             exec_instances: Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
+            config_manager: Arc::new(crate::swarm::ConfigManager::new()),
         }
     }
 
@@ -1913,31 +1915,95 @@ impl ApiHandler {
     }
 
     // Config methods
-    fn list_configs(&self, _path: &str) -> Result<String> {
-        Ok("[]".to_string())
+    fn list_configs(&self, path: &str) -> Result<String> {
+        // Parse filters from query string
+        let filters = if let Some(pos) = path.find("filters=") {
+            let start = pos + 8;
+            let end = path[start..]
+                .find('&')
+                .map(|i| start + i)
+                .unwrap_or(path.len());
+            let filter_str = &path[start..end];
+            match urlencoding_decode(filter_str) {
+                Ok(decoded) => match crate::swarm::config::ConfigFilters::from_json(&decoded) {
+                    Ok(f) => Some(f),
+                    Err(e) => {
+                        debug!("Failed to parse config filters: {}", e);
+                        None
+                    }
+                },
+                Err(_) => {
+                    debug!("Failed to URL-decode config filters");
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        let configs = self.config_manager.list(filters)?;
+
+        let response: Vec<serde_json::Value> = configs
+            .iter()
+            .map(|c| {
+                json!({
+                    "ID": c.id,
+                    "Version": {"Index": c.version.index},
+                    "CreatedAt": c.created_at.to_rfc3339(),
+                    "UpdatedAt": c.updated_at.to_rfc3339(),
+                    "Spec": {
+                        "Name": c.spec.name,
+                        "Labels": c.spec.labels,
+                        "Data": c.spec.data,
+                        "Templating": c.spec.templating
+                    }
+                })
+            })
+            .collect();
+
+        Ok(serde_json::to_string(&response)?)
     }
 
     fn inspect_config(&self, id: &str) -> Result<String> {
+        let config = self.config_manager.get(id)?;
+
         Ok(json!({
-            "ID": id,
-            "Version": {"Index": 1},
-            "CreatedAt": chrono::Utc::now().to_rfc3339(),
-            "UpdatedAt": chrono::Utc::now().to_rfc3339(),
-            "Spec": {"Name": id}
+            "ID": config.id,
+            "Version": {"Index": config.version.index},
+            "CreatedAt": config.created_at.to_rfc3339(),
+            "UpdatedAt": config.updated_at.to_rfc3339(),
+            "Spec": {
+                "Name": config.spec.name,
+                "Labels": config.spec.labels,
+                "Data": config.spec.data,
+                "Templating": config.spec.templating
+            }
         })
         .to_string())
     }
 
-    fn create_config(&self, _body: &str) -> Result<String> {
-        let id = uuid::Uuid::new_v4().to_string();
+    fn create_config(&self, body: &str) -> Result<String> {
+        let request: crate::swarm::config::ConfigCreateRequest = serde_json::from_str(body)?;
+        let spec: crate::swarm::ConfigSpec = request.into();
+        let id = self.config_manager.create(spec)?;
         Ok(json!({"ID": id}).to_string())
     }
 
-    fn remove_config(&self, _id: &str) -> Result<String> {
+    fn remove_config(&self, id: &str) -> Result<String> {
+        self.config_manager.remove(id)?;
         Ok("".to_string())
     }
 
-    fn update_config(&self, _id: &str, _path: &str, _body: &str) -> Result<String> {
+    fn update_config(&self, id: &str, path: &str, body: &str) -> Result<String> {
+        // Parse version from query string (required for optimistic locking)
+        let version = parse_query_param(path, "version")
+            .ok_or_else(|| RuneError::Api("version query parameter is required".to_string()))?
+            as u64;
+
+        let request: crate::swarm::config::ConfigCreateRequest = serde_json::from_str(body)?;
+        let spec: crate::swarm::ConfigSpec = request.into();
+
+        self.config_manager.update(id, spec, version)?;
         Ok("".to_string())
     }
 
