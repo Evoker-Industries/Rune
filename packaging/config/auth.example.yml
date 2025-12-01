@@ -1,0 +1,89 @@
+# Rune Registry Authentication Configuration
+#
+# This file configures authentication for the Rune container registry.
+# Copy this file to /etc/rune/auth.yml and customize as needed.
+#
+# To enable authentication:
+# 1. Copy this file: cp auth.example.yml /etc/rune/auth.yml
+# 2. Edit the configuration below
+# 3. Add users with: rune registry user add <username>
+# 4. Start registry with: rune registry serve --auth-config /etc/rune/auth.yml
+
+# Enable or disable authentication
+# When disabled, all operations are allowed without credentials
+enabled: true
+
+# Authentication realm (shown in WWW-Authenticate header)
+realm: "Rune Registry"
+
+# Service identifier (used in token generation)
+service: "rune-registry"
+
+# Token issuer name
+issuer: "rune"
+
+# Token expiry time in seconds (default: 1 hour)
+token_expiry: 3600
+
+# Allow anonymous access for specific operations
+anonymous:
+  # Allow unauthenticated pull operations
+  pull: true
+  # Allow unauthenticated push operations (not recommended)
+  push: false
+
+# TLS configuration for secure token transmission
+# Highly recommended when authentication is enabled
+tls:
+  enabled: false
+  cert_file: "/etc/rune/ssl/registry.crt"
+  key_file: "/etc/rune/ssl/registry.key"
+
+# User database location
+# Users are stored in this file with bcrypt-hashed passwords
+users_file: "/var/lib/rune/registry/users.json"
+
+# Access control rules
+# Define which users/groups can access which repositories
+access_rules:
+  # Admin users have full access to all repositories
+  - name: "admin"
+    match:
+      users: ["admin"]
+    permissions:
+      repositories: "*"
+      actions: ["pull", "push", "delete"]
+  
+  # Developers can push to their own namespace
+  - name: "developers"
+    match:
+      groups: ["developers"]
+    permissions:
+      repositories: "${user}/*"
+      actions: ["pull", "push"]
+  
+  # Public read access to 'library' namespace
+  - name: "public-library"
+    match:
+      users: ["*"]  # All authenticated users
+    permissions:
+      repositories: "library/*"
+      actions: ["pull"]
+
+# Rate limiting (optional)
+rate_limit:
+  enabled: false
+  # Requests per minute per user
+  requests_per_minute: 100
+  # Burst allowance
+  burst: 20
+
+# Audit logging
+audit:
+  enabled: true
+  # Log file location
+  file: "/var/log/rune/registry-audit.log"
+  # Log level: debug, info, warn, error
+  level: "info"
+  # Include request body in logs (may contain sensitive data)
+  include_body: false

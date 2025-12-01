@@ -1,0 +1,104 @@
+[workspace]
+members = [".", "xtask", "lsp-wasm", "builder-wasm", "rune-wasm"]
+resolver = "2"
+
+[package]
+name = "rune"
+version = "0.1.0"
+edition = "2021"
+description = "A Docker-like and Docker-compatible container service with a TUI"
+authors = ["Evoker Industries"]
+license = "MIT"
+
+[dependencies]
+# TUI
+ratatui = "0.29"
+crossterm = "0.28"
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling
+thiserror = "2"
+anyhow = "1"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Low-level system calls (for container runtime)
+libc = "0.2"
+
+# UUID generation
+uuid = { version = "1", features = ["v4"] }
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# HTTP client for Docker API compatibility
+reqwest = { version = "0.12", features = ["json"] }
+
+# OCI image spec
+oci-spec = "0.7"
+
+# Tar archive handling
+tar = "0.4"
+flate2 = "1"
+
+# Directories
+dirs = "6"
+
+# YAML parsing (for compose files)
+serde_yaml = "0.9"
+
+# Regex
+regex = "1"
+
+# Random number generation
+rand = "0.8"
+
+# Hostname
+gethostname = "0.5"
+
+# CPU count
+num_cpus = "1"
+
+# SHA-256 hashing
+sha2 = "0.10"
+
+# Password hashing
+bcrypt = "0.16"
+
+# Base64 encoding
+base64 = "0.22"
+
+# Directory walking
+walkdir = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+# Workspace-level profiles for WASM builds
+[profile.release-wasm]
+inherits = "release"
+opt-level = "s"
+lto = true
+
+[[bin]]
+name = "rune"
+path = "src/main.rs"
+
+[[bin]]
+name = "rune-tui"
+path = "src/bin/tui.rs"
+
+[[bin]]
+name = "runefile-lsp"
+path = "src/bin/runefile-lsp.rs"

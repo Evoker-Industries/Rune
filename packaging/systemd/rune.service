@@ -1,0 +1,33 @@
+[Unit]
+Description=Rune Container Daemon
+Documentation=https://github.com/Evoker-Industries/Rune
+After=network-online.target firewalld.service
+Wants=network-online.target
+Requires=rune.socket
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/runed --config /etc/rune/daemon.yml
+ExecReload=/bin/kill -s HUP $MAINPID
+TimeoutStartSec=0
+RestartSec=2
+Restart=always
+
+# Having non-zero Limit*s causes performance problems due to accounting overhead
+# in the kernel. We recommend using cgroups to do container-local accounting.
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+
+# Comment TasksMax if your systemd version does not support it.
+TasksMax=infinity
+
+# set delegate yes so that systemd does not reset the cgroups of containers
+Delegate=yes
+
+# kill only the daemon process, not all processes in the cgroup
+KillMode=process
+OOMScoreAdjust=-500
+
+[Install]
+WantedBy=multi-user.target

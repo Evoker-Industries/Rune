@@ -1,0 +1,131 @@
+# Rune Registry Configuration
+#
+# This is the main configuration file for the Rune container registry.
+# Copy to /etc/rune/registry.yml and customize as needed.
+
+# Server configuration
+server:
+  # Listen address
+  address: "0.0.0.0"
+  # Listen port
+  port: 5000
+  # Enable TLS
+  tls_enabled: false
+  # TLS certificate path
+  tls_cert: null
+  # TLS key path
+  tls_key: null
+
+# Storage configuration
+storage:
+  # Storage backend path
+  path: "/var/lib/rune/registry"
+  # Enable storage maintenance
+  maintenance:
+    # Enable garbage collection
+    gc_enabled: true
+    # GC schedule (cron format)
+    gc_schedule: "0 2 * * *"  # 2 AM daily
+  # Storage limits
+  limits:
+    # Maximum manifest size (4MB default)
+    max_manifest_size: 4194304
+    # Maximum layer size (10GB default)
+    max_layer_size: 10737418240
+
+# Authentication configuration
+# For detailed auth config, see auth.example.yml
+auth:
+  # Enable authentication
+  enabled: false
+  # Path to auth config file (optional, for detailed config)
+  config_file: null
+  # Quick config options (used if config_file is not set)
+  realm: "Rune Registry"
+  service: "rune-registry"
+  # Allow anonymous pull
+  anonymous_pull: true
+  # Allow anonymous push
+  anonymous_push: false
+
+# Delete operations
+delete:
+  # Enable delete operations
+  enabled: true
+  # Soft delete (keep data but mark as deleted)
+  soft_delete: false
+
+# HTTP configuration
+http:
+  # Read timeout in seconds
+  read_timeout: 60
+  # Write timeout in seconds
+  write_timeout: 60
+  # Maximum header size
+  max_header_size: 32768
+  # CORS configuration
+  cors:
+    enabled: true
+    allowed_origins:
+      - "*"
+    allowed_methods:
+      - "GET"
+      - "HEAD"
+      - "POST"
+      - "PUT"
+      - "PATCH"
+      - "DELETE"
+      - "OPTIONS"
+    allowed_headers:
+      - "Authorization"
+      - "Content-Type"
+      - "Docker-Content-Digest"
+      - "Docker-Distribution-API-Version"
+    exposed_headers:
+      - "Docker-Content-Digest"
+      - "Docker-Distribution-API-Version"
+      - "Location"
+      - "Range"
+    max_age: 86400
+
+# Logging configuration
+logging:
+  # Log level: trace, debug, info, warn, error
+  level: "info"
+  # Log format: json, text
+  format: "text"
+  # Log file (null for stdout)
+  file: null
+
+# Metrics configuration
+metrics:
+  # Enable Prometheus metrics
+  enabled: false
+  # Metrics endpoint path
+  path: "/metrics"
+  # Metrics port (null to use same as server)
+  port: null
+
+# Notifications (webhooks)
+notifications:
+  enabled: false
+  endpoints: []
+  # Example:
+  # - name: "webhook"
+  #   url: "https://example.com/webhook"
+  #   headers:
+  #     Authorization: "Bearer secret"
+  #   timeout: 5
+  #   events:
+  #     - "push"
+  #     - "pull"
+  #     - "delete"
+
+# Proxy/mirror configuration
+proxy:
+  # Enable pull-through cache
+  enabled: false
+  # Upstream registry
+  remote_url: null
+  # Cache TTL in hours
+  cache_ttl: 168  # 7 days

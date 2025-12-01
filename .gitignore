@@ -1,0 +1,62 @@
+# Build artifacts
+/target
+**/target/
+**/debug/
+**/release/
+
+# WASM build artifacts
+**/pkg/
+**/*.wasm
+
+# Cargo
+Cargo.lock
+!/**/Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# Debug/release artifacts in subprojects
+builder-wasm/target/
+lsp-wasm/target/
+rune-wasm/target/
+xtask/target/
+
+# Incremental compilation
+**/incremental/
+
+# Fingerprint files
+**/.fingerprint/
+
+# Cargo lock files in subdirectories (keep root one)
+builder-wasm/Cargo.lock
+lsp-wasm/Cargo.lock
+rune-wasm/Cargo.lock
+xtask/Cargo.lock
+
+# Build cache
+**/.cargo-lock
+**/CACHEDIR.TAG
+**/.rustc_info.json
+
+# Dependencies
+**/deps/
+
+# Example and test build outputs
+**/examples/target/
+**/tests/target/
+
+# Node modules (for VSCode extension)
+**/node_modules/

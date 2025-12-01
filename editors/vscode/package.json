@@ -1,0 +1,114 @@
+{
+  "name": "runefile",
+  "displayName": "Runefile Language Support",
+  "description": "Syntax highlighting, completion, and diagnostics for Runefile (Docker-compatible container build files)",
+  "version": "0.1.0",
+  "publisher": "evoker-industries",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Evoker-Industries/Rune"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Formatters"
+  ],
+  "keywords": [
+    "runefile",
+    "dockerfile",
+    "container",
+    "docker",
+    "rune"
+  ],
+  "activationEvents": [
+    "onLanguage:runefile",
+    "onLanguage:dockerfile"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "runefile",
+        "aliases": [
+          "Runefile",
+          "runefile"
+        ],
+        "filenames": [
+          "Runefile",
+          "Runefile.dev",
+          "Runefile.prod"
+        ],
+        "extensions": [
+          ".runefile"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "runefile",
+        "scopeName": "source.runefile",
+        "path": "./syntaxes/runefile.tmLanguage.json"
+      }
+    ],
+    "configuration": {
+      "title": "Runefile",
+      "properties": {
+        "runefile.languageServer.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the Runefile language server"
+        },
+        "runefile.languageServer.path": {
+          "type": "string",
+          "default": "runefile-lsp",
+          "description": "Path to the Runefile language server binary"
+        },
+        "runefile.validation.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable validation and diagnostics"
+        },
+        "runefile.completion.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable auto-completion"
+        },
+        "runefile.hover.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable hover documentation"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "runefile.buildImage",
+        "title": "Build Image",
+        "category": "Runefile"
+      },
+      {
+        "command": "runefile.validateFile",
+        "title": "Validate Runefile",
+        "category": "Runefile"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.75.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.0"
+  }
+}

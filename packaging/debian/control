@@ -1,0 +1,26 @@
+Source: rune
+Section: admin
+Priority: optional
+Maintainer: Evoker Industries <contact@evoker.industries>
+Build-Depends: debhelper-compat (= 13), cargo, rustc (>= 1.70)
+Standards-Version: 4.6.0
+Homepage: https://github.com/Evoker-Industries/Rune
+Vcs-Git: https://github.com/Evoker-Industries/Rune.git
+Vcs-Browser: https://github.com/Evoker-Industries/Rune
+
+Package: rune
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: ca-certificates
+Description: Docker-compatible container runtime with TUI
+ Rune is a Docker-like and Docker-compatible container service written in Rust.
+ .
+ Features:
+  * Container lifecycle management (create, start, stop, remove)
+  * Image building from Runefile or Dockerfile
+  * Docker Compose compatibility
+  * Docker Swarm compatibility
+  * OCI-compatible container registry
+  * Terminal User Interface (TUI)
+  * Unix socket daemon (Docker API compatible)
+  * Custom container runtime using Linux namespaces and cgroups

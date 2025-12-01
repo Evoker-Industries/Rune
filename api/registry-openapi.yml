@@ -1,0 +1,873 @@
+openapi: 3.1.0
+info:
+  title: Rune Container Registry API
+  description: |
+    OCI Distribution Specification v2 compliant container registry API.
+    
+    This API implements the [OCI Distribution Spec](https://github.com/opencontainers/distribution-spec/blob/main/spec.md)
+    for storing and distributing container images.
+    
+    ## Authentication
+    
+    Authentication can be enabled via the registry configuration. When enabled, the registry
+    supports Bearer token authentication following the Docker Registry v2 authentication spec.
+    
+    To authenticate:
+    1. Make a request to a protected endpoint
+    2. Receive a 401 with `WWW-Authenticate` header
+    3. Request a token from the token endpoint with your credentials
+    4. Include the token in subsequent requests as `Authorization: Bearer <token>`
+    
+    ## Quick Start
+    
+    ```bash
+    # Enable authentication in config
+    rune registry serve --auth-enabled --port 5000
+    
+    # Or via environment variables
+    RUNE_REGISTRY_AUTH_ENABLED=true rune registry serve
+    ```
+    
+  version: 1.0.0
+  contact:
+    name: Evoker Industries
+    url: https://github.com/Evoker-Industries/Rune
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:5000
+    description: Local development server
+  - url: https://registry.example.com
+    description: Production server
+
+tags:
+  - name: Base
+    description: Base endpoints for API version check
+  - name: Catalog
+    description: Repository catalog operations
+  - name: Manifests
+    description: Image manifest operations
+  - name: Blobs
+    description: Blob (layer) operations
+  - name: Tags
+    description: Tag listing operations
+  - name: Authentication
+    description: Authentication endpoints
+
+security:
+  - bearerAuth: []
+  - basicAuth: []
+
+paths:
+  /v2/:
+    get:
+      tags:
+        - Base
+      summary: Check API version
+      description: |
+        Check that the registry implements the OCI Distribution Specification.
+        Returns 200 OK if the registry is available and supports v2 API.
+      operationId: checkApiVersion
+      security: []
+      responses:
+        '200':
+          description: Registry supports v2 API
+          headers:
+            Docker-Distribution-API-Version:
+              schema:
+                type: string
+                example: registry/2.0
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v2/_catalog:
+    get:
+      tags:
+        - Catalog
+      summary: List repositories
+      description: Retrieve a list of repositories available in the registry.
+      operationId: listRepositories
+      parameters:
+        - name: n
+          in: query
+          description: Maximum number of results to return
+          schema:
+            type: integer
+            minimum: 1
+            default: 100
+        - name: last
+          in: query
+          description: Last repository from previous page (for pagination)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of repositories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Catalog'
+          headers:
+            Link:
+              description: Pagination link for next page
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v2/{name}/tags/list:
+    get:
+      tags:
+        - Tags
+      summary: List tags
+      description: Retrieve a list of tags for a repository.
+      operationId: listTags
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - name: n
+          in: query
+          description: Maximum number of results
+          schema:
+            type: integer
+        - name: last
+          in: query
+          description: Last tag from previous page
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagsList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v2/{name}/manifests/{reference}:
+    head:
+      tags:
+        - Manifests
+      summary: Check manifest exists
+      description: Check if a manifest exists without returning the body.
+      operationId: manifestExists
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/Reference'
+      responses:
+        '200':
+          description: Manifest exists
+          headers:
+            Content-Length:
+              schema:
+                type: integer
+            Docker-Content-Digest:
+              schema:
+                type: string
+            Content-Type:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags:
+        - Manifests
+      summary: Get manifest
+      description: Retrieve the manifest for an image.
+      operationId: getManifest
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/Reference'
+        - name: Accept
+          in: header
+          description: Acceptable media types
+          schema:
+            type: string
+            default: application/vnd.oci.image.manifest.v1+json
+      responses:
+        '200':
+          description: Manifest content
+          content:
+            application/vnd.oci.image.manifest.v1+json:
+              schema:
+                $ref: '#/components/schemas/ImageManifest'
+            application/vnd.docker.distribution.manifest.v2+json:
+              schema:
+                $ref: '#/components/schemas/ImageManifest'
+            application/vnd.oci.image.index.v1+json:
+              schema:
+                $ref: '#/components/schemas/ImageIndex'
+          headers:
+            Docker-Content-Digest:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Manifests
+      summary: Put manifest
+      description: Upload an image manifest.
+      operationId: putManifest
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/Reference'
+      requestBody:
+        required: true
+        content:
+          application/vnd.oci.image.manifest.v1+json:
+            schema:
+              $ref: '#/components/schemas/ImageManifest'
+          application/vnd.docker.distribution.manifest.v2+json:
+            schema:
+              $ref: '#/components/schemas/ImageManifest'
+      responses:
+        '201':
+          description: Manifest created
+          headers:
+            Location:
+              schema:
+                type: string
+            Docker-Content-Digest:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      tags:
+        - Manifests
+      summary: Delete manifest
+      description: Delete an image manifest.
+      operationId: deleteManifest
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/Reference'
+      responses:
+        '202':
+          description: Manifest deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v2/{name}/blobs/{digest}:
+    head:
+      tags:
+        - Blobs
+      summary: Check blob exists
+      description: Check if a blob exists in the registry.
+      operationId: blobExists
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/Digest'
+      responses:
+        '200':
+          description: Blob exists
+          headers:
+            Content-Length:
+              schema:
+                type: integer
+            Docker-Content-Digest:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    get:
+      tags:
+        - Blobs
+      summary: Get blob
+      description: Download a blob from the registry.
+      operationId: getBlob
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/Digest'
+        - name: Range
+          in: header
+          description: Byte range for partial content
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Blob content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Docker-Content-Digest:
+              schema:
+                type: string
+        '206':
+          description: Partial content
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Blobs
+      summary: Delete blob
+      description: Delete a blob from the registry.
+      operationId: deleteBlob
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/Digest'
+      responses:
+        '202':
+          description: Blob deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v2/{name}/blobs/uploads/:
+    post:
+      tags:
+        - Blobs
+      summary: Start blob upload
+      description: |
+        Initiate a blob upload. Supports three modes:
+        - Monolithic upload (single POST with digest parameter)
+        - Chunked upload (POST to start, PATCH to upload, PUT to finish)
+        - Cross-repository mount (mount parameter)
+      operationId: startBlobUpload
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - name: digest
+          in: query
+          description: Digest for monolithic upload
+          schema:
+            type: string
+        - name: mount
+          in: query
+          description: Digest of blob to mount from another repository
+          schema:
+            type: string
+        - name: from
+          in: query
+          description: Source repository for mount
+          schema:
+            type: string
+      requestBody:
+        description: Blob data for monolithic upload
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '202':
+          description: Upload started
+          headers:
+            Location:
+              schema:
+                type: string
+            Docker-Upload-UUID:
+              schema:
+                type: string
+            Range:
+              schema:
+                type: string
+        '201':
+          description: Blob created (monolithic or mounted)
+          headers:
+            Location:
+              schema:
+                type: string
+            Docker-Content-Digest:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /v2/{name}/blobs/uploads/{uuid}:
+    get:
+      tags:
+        - Blobs
+      summary: Get upload status
+      description: Get the status of an in-progress upload.
+      operationId: getUploadStatus
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/UploadUUID'
+      responses:
+        '204':
+          description: Upload status
+          headers:
+            Location:
+              schema:
+                type: string
+            Range:
+              schema:
+                type: string
+            Docker-Upload-UUID:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - Blobs
+      summary: Upload blob chunk
+      description: Upload a chunk of blob data.
+      operationId: uploadBlobChunk
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/UploadUUID'
+        - name: Content-Range
+          in: header
+          description: Byte range being uploaded
+          schema:
+            type: string
+        - name: Content-Length
+          in: header
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '202':
+          description: Chunk uploaded
+          headers:
+            Location:
+              schema:
+                type: string
+            Range:
+              schema:
+                type: string
+            Docker-Upload-UUID:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '416':
+          description: Range not satisfiable
+    put:
+      tags:
+        - Blobs
+      summary: Complete blob upload
+      description: Complete a chunked upload or perform a monolithic upload.
+      operationId: completeBlobUpload
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/UploadUUID'
+        - name: digest
+          in: query
+          required: true
+          description: Final digest of the blob
+          schema:
+            type: string
+      requestBody:
+        description: Final chunk data (optional)
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        '201':
+          description: Blob created
+          headers:
+            Location:
+              schema:
+                type: string
+            Docker-Content-Digest:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Blobs
+      summary: Cancel blob upload
+      description: Cancel an in-progress upload and release resources.
+      operationId: cancelBlobUpload
+      parameters:
+        - $ref: '#/components/parameters/Name'
+        - $ref: '#/components/parameters/UploadUUID'
+      responses:
+        '204':
+          description: Upload cancelled
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v2/auth/token:
+    get:
+      tags:
+        - Authentication
+      summary: Get authentication token
+      description: |
+        Obtain a Bearer token for authentication. This endpoint follows the
+        Docker Registry v2 authentication specification.
+        
+        ## Usage
+        
+        ```bash
+        # Get token with basic auth
+        curl -u username:password \
+          "http://localhost:5000/v2/auth/token?service=rune-registry&scope=repository:library/nginx:pull,push"
+        ```
+      operationId: getToken
+      security:
+        - basicAuth: []
+      parameters:
+        - name: service
+          in: query
+          required: true
+          description: Service name (registry identifier)
+          schema:
+            type: string
+            example: rune-registry
+        - name: scope
+          in: query
+          description: |
+            Requested scope in format: `resource_type:resource_name:actions`
+            Multiple scopes can be specified.
+          schema:
+            type: string
+            example: repository:library/nginx:pull,push
+        - name: account
+          in: query
+          description: Account name (optional, derived from auth)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Token response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Bearer token authentication. Obtain a token from `/v2/auth/token`.
+        
+        ```
+        Authorization: Bearer <token>
+        ```
+    basicAuth:
+      type: http
+      scheme: basic
+      description: |
+        HTTP Basic authentication for obtaining tokens.
+        
+        ```
+        Authorization: Basic base64(username:password)
+        ```
+
+  parameters:
+    Name:
+      name: name
+      in: path
+      required: true
+      description: Repository name (e.g., library/nginx)
+      schema:
+        type: string
+        pattern: ^[a-z0-9]+([._-][a-z0-9]+)*(/[a-z0-9]+([._-][a-z0-9]+)*)*$
+        example: library/nginx
+    Reference:
+      name: reference
+      in: path
+      required: true
+      description: Tag or digest reference
+      schema:
+        type: string
+        example: latest
+    Digest:
+      name: digest
+      in: path
+      required: true
+      description: Content digest (sha256:...)
+      schema:
+        type: string
+        pattern: ^sha256:[a-f0-9]{64}$
+        example: sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4
+    UploadUUID:
+      name: uuid
+      in: path
+      required: true
+      description: Upload session UUID
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    Catalog:
+      type: object
+      required:
+        - repositories
+      properties:
+        repositories:
+          type: array
+          items:
+            type: string
+          example:
+            - library/nginx
+            - library/alpine
+            - myproject/myapp
+
+    TagsList:
+      type: object
+      required:
+        - name
+        - tags
+      properties:
+        name:
+          type: string
+          example: library/nginx
+        tags:
+          type: array
+          items:
+            type: string
+          example:
+            - latest
+            - 1.25.0
+            - 1.24.0
+
+    ImageManifest:
+      type: object
+      required:
+        - schemaVersion
+        - config
+        - layers
+      properties:
+        schemaVersion:
+          type: integer
+          enum: [2]
+        mediaType:
+          type: string
+          example: application/vnd.oci.image.manifest.v1+json
+        artifactType:
+          type: string
+          description: OCI 1.1+ artifact type
+        config:
+          $ref: '#/components/schemas/Descriptor'
+        layers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Descriptor'
+        subject:
+          $ref: '#/components/schemas/Descriptor'
+        annotations:
+          type: object
+          additionalProperties:
+            type: string
+
+    ImageIndex:
+      type: object
+      required:
+        - schemaVersion
+        - manifests
+      properties:
+        schemaVersion:
+          type: integer
+          enum: [2]
+        mediaType:
+          type: string
+          example: application/vnd.oci.image.index.v1+json
+        artifactType:
+          type: string
+        manifests:
+          type: array
+          items:
+            $ref: '#/components/schemas/Descriptor'
+        subject:
+          $ref: '#/components/schemas/Descriptor'
+        annotations:
+          type: object
+          additionalProperties:
+            type: string
+
+    Descriptor:
+      type: object
+      required:
+        - mediaType
+        - digest
+        - size
+      properties:
+        mediaType:
+          type: string
+          example: application/vnd.oci.image.layer.v1.tar+gzip
+        digest:
+          type: string
+          example: sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4
+        size:
+          type: integer
+          format: int64
+          example: 32654
+        urls:
+          type: array
+          items:
+            type: string
+        annotations:
+          type: object
+          additionalProperties:
+            type: string
+        platform:
+          $ref: '#/components/schemas/Platform'
+        artifactType:
+          type: string
+        data:
+          type: string
+          description: Base64-encoded data for small blobs
+
+    Platform:
+      type: object
+      required:
+        - architecture
+        - os
+      properties:
+        architecture:
+          type: string
+          example: amd64
+        os:
+          type: string
+          example: linux
+        os.version:
+          type: string
+        os.features:
+          type: array
+          items:
+            type: string
+        variant:
+          type: string
+          example: v8
+
+    TokenResponse:
+      type: object
+      required:
+        - token
+        - expires_in
+      properties:
+        token:
+          type: string
+          description: Bearer token
+        access_token:
+          type: string
+          description: Alias for token (Docker compatibility)
+        expires_in:
+          type: integer
+          description: Token lifetime in seconds
+          example: 3600
+        issued_at:
+          type: string
+          format: date-time
+          description: Token issuance timestamp
+
+    ErrorResponse:
+      type: object
+      required:
+        - errors
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Error'
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          enum:
+            - BLOB_UNKNOWN
+            - BLOB_UPLOAD_INVALID
+            - BLOB_UPLOAD_UNKNOWN
+            - DIGEST_INVALID
+            - MANIFEST_BLOB_UNKNOWN
+            - MANIFEST_INVALID
+            - MANIFEST_UNKNOWN
+            - NAME_INVALID
+            - NAME_UNKNOWN
+            - SIZE_INVALID
+            - UNAUTHORIZED
+            - DENIED
+            - UNSUPPORTED
+            - TOOMANYREQUESTS
+        message:
+          type: string
+        detail:
+          type: object
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+            example: 'Bearer realm="https://auth.example.com/token",service="registry",scope="repository:library/nginx:pull"'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errors:
+              - code: UNAUTHORIZED
+                message: authentication required
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errors:
+              - code: NAME_UNKNOWN
+                message: repository name not known to registry
+
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            errors:
+              - code: DIGEST_INVALID
+                message: provided digest did not match uploaded content

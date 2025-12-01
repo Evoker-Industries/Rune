@@ -1,0 +1,13 @@
+rune (0.1.0-1) unstable; urgency=medium
+
+  * Initial release.
+  * Docker-compatible container runtime
+  * Container lifecycle management
+  * Image building from Runefile/Dockerfile
+  * Docker Compose support
+  * Docker Swarm support
+  * OCI-compatible registry
+  * TUI interface
+  * Unix socket daemon
+
+ -- Evoker Industries <contact@evoker.industries>  Thu, 28 Nov 2024 00:00:00 +0000
