@@ -100,4 +100,13 @@ pub enum RuneError {
 
     #[error("Runtime error: {0}")]
     Runtime(String),
+
+    #[error("Daemon error: {0}")]
+    Daemon(String),
+
+    #[error("API error: {0}")]
+    Api(String),
+
+    #[error("Healthcheck failed: {0}")]
+    Healthcheck(String),
 }

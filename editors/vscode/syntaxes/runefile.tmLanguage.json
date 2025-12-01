@@ -1,0 +1,87 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Runefile",
+  "scopeName": "source.runefile",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#directives" },
+    { "include": "#instructions" },
+    { "include": "#strings" },
+    { "include": "#variables" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.runefile",
+          "match": "^\\s*#.*$"
+        }
+      ]
+    },
+    "directives": {
+      "patterns": [
+        {
+          "name": "keyword.control.directive.runefile",
+          "match": "^#\\s*(syntax|escape)\\s*=.*$"
+        }
+      ]
+    },
+    "instructions": {
+      "patterns": [
+        {
+          "name": "keyword.control.runefile",
+          "match": "^\\s*(?i)(FROM|RUN|CMD|LABEL|MAINTAINER|EXPOSE|ENV|ADD|COPY|ENTRYPOINT|VOLUME|USER|WORKDIR|ARG|ONBUILD|STOPSIGNAL|HEALTHCHECK|SHELL)\\b"
+        },
+        {
+          "name": "keyword.other.special.runefile",
+          "match": "(?i)\\b(AS|NONE)\\b"
+        },
+        {
+          "name": "keyword.operator.flag.runefile",
+          "match": "--[a-zA-Z][a-zA-Z0-9-]*"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.runefile",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            { "include": "#escape-sequences" },
+            { "include": "#variables" }
+          ]
+        },
+        {
+          "name": "string.quoted.single.runefile",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            { "include": "#escape-sequences" }
+          ]
+        }
+      ]
+    },
+    "variables": {
+      "patterns": [
+        {
+          "name": "variable.other.runefile",
+          "match": "\\$[a-zA-Z_][a-zA-Z0-9_]*"
+        },
+        {
+          "name": "variable.other.bracket.runefile",
+          "match": "\\$\\{[^}]+\\}"
+        }
+      ]
+    },
+    "escape-sequences": {
+      "patterns": [
+        {
+          "name": "constant.character.escape.runefile",
+          "match": "\\\\."
+        }
+      ]
+    }
+  }
+}

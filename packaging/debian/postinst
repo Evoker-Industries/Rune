@@ -1,0 +1,27 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    configure)
+        # Create rune group if it doesn't exist
+        if ! getent group rune >/dev/null; then
+            groupadd --system rune
+        fi
+
+        # Set permissions on socket directory
+        if [ -d /var/run ]; then
+            chown root:rune /var/run 2>/dev/null || true
+        fi
+
+        # Enable and start the socket
+        if [ -d /run/systemd/system ]; then
+            systemctl daemon-reload >/dev/null || true
+            systemctl enable rune.socket >/dev/null || true
+            systemctl start rune.socket >/dev/null || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

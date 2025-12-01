@@ -1,0 +1,13 @@
+[Unit]
+Description=Rune Container Daemon Socket
+Documentation=https://github.com/Evoker-Industries/Rune
+PartOf=rune.service
+
+[Socket]
+ListenStream=/var/run/rune.sock
+SocketMode=0660
+SocketUser=root
+SocketGroup=rune
+
+[Install]
+WantedBy=sockets.target

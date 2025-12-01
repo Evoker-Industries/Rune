@@ -1,0 +1,43 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export CARGO_HOME = $(CURDIR)/debian/cargo
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	cargo build --release
+
+override_dh_auto_install:
+	# Install binaries
+	install -D -m 755 target/release/rune debian/rune/usr/bin/rune
+	install -D -m 755 target/release/rune-tui debian/rune/usr/bin/rune-tui
+	
+	# Create symlink for daemon
+	ln -sf rune debian/rune/usr/bin/runed
+	
+	# Install systemd service files
+	install -D -m 644 packaging/systemd/rune.service debian/rune/lib/systemd/system/rune.service
+	install -D -m 644 packaging/systemd/rune.socket debian/rune/lib/systemd/system/rune.socket
+	install -D -m 644 packaging/systemd/rune-registry.service debian/rune/lib/systemd/system/rune-registry.service
+	
+	# Install configuration files
+	install -D -m 644 packaging/config/registry.example.yml debian/rune/etc/rune/registry.yml.example
+	install -D -m 644 packaging/config/auth.example.yml debian/rune/etc/rune/auth.yml.example
+	
+	# Create data directories
+	install -d -m 755 debian/rune/var/lib/rune
+	install -d -m 755 debian/rune/var/lib/rune/containers
+	install -d -m 755 debian/rune/var/lib/rune/images
+	install -d -m 755 debian/rune/var/lib/rune/volumes
+	install -d -m 755 debian/rune/var/lib/rune/networks
+	install -d -m 755 debian/rune/var/lib/rune/registry
+	install -d -m 755 debian/rune/var/log/rune
+
+override_dh_auto_test:
+	cargo test --release
+
+override_dh_auto_clean:
+	cargo clean
+	rm -rf $(CARGO_HOME)

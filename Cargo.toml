@@ -88,3 +88,7 @@ path = "src/main.rs"
 [[bin]]
 name = "rune-tui"
 path = "src/bin/tui.rs"
+
+[[bin]]
+name = "runefile-lsp"
+path = "src/bin/runefile-lsp.rs"
