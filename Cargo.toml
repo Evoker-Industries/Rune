@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "xtask", "lsp-wasm", "builder-wasm"]
+members = [".", "xtask", "lsp-wasm", "builder-wasm", "rune-wasm"]
 resolver = "2"
 
 [package]

@@ -60,7 +60,7 @@ enum Commands {
         #[arg(long)]
         release: bool,
     },
-    /// Build WASM modules (LSP and Builder)
+    /// Build WASM modules (LSP, Builder, and Rune)
     BuildWasm {
         /// Build in release mode
         #[arg(long)]
@@ -74,6 +74,12 @@ enum Commands {
     },
     /// Build WASM Builder module only
     BuildWasmBuilder {
+        /// Build in release mode
+        #[arg(long)]
+        release: bool,
+    },
+    /// Build WASM Rune client module only
+    BuildWasmRune {
         /// Build in release mode
         #[arg(long)]
         release: bool,
@@ -108,6 +114,8 @@ enum Commands {
     TestWasmLsp,
     /// Test WASM Builder module
     TestWasmBuilder,
+    /// Test WASM Rune client module
+    TestWasmRune,
     /// Run lints (clippy and rustfmt check)
     Lint,
     /// Format code
@@ -148,6 +156,7 @@ fn main() -> Result<()> {
         Commands::BuildWasm { release } => build_wasm(&sh, release)?,
         Commands::BuildWasmLsp { release } => build_wasm_lsp(&sh, release)?,
         Commands::BuildWasmBuilder { release } => build_wasm_builder(&sh, release)?,
+        Commands::BuildWasmRune { release } => build_wasm_rune(&sh, release)?,
         Commands::BuildDeb => build_deb(&sh)?,
         Commands::BuildRune { release } => build_rune(&sh, release)?,
         Commands::BuildTui { release } => build_tui(&sh, release)?,
@@ -155,6 +164,7 @@ fn main() -> Result<()> {
         Commands::Test { release } => test(&sh, release)?,
         Commands::TestWasmLsp => test_wasm_lsp(&sh)?,
         Commands::TestWasmBuilder => test_wasm_builder(&sh)?,
+        Commands::TestWasmRune => test_wasm_rune(&sh)?,
         Commands::Lint => lint(&sh)?,
         Commands::Fmt { check } => fmt(&sh, check)?,
         Commands::Clean => clean(&sh)?,
@@ -227,6 +237,7 @@ fn build_wasm(sh: &Shell, release: bool) -> Result<()> {
     
     build_wasm_lsp(sh, release)?;
     build_wasm_builder(sh, release)?;
+    build_wasm_rune(sh, release)?;
     
     println!("✅ WASM build complete!");
     Ok(())
@@ -261,6 +272,22 @@ fn build_wasm_builder(sh: &Shell, release: bool) -> Result<()> {
     sh.change_dir("..");
     
     println!("✅ WASM Builder build complete!");
+    Ok(())
+}
+
+fn build_wasm_rune(sh: &Shell, release: bool) -> Result<()> {
+    println!("🌐 Building WASM Rune client module...");
+    
+    // Check if wasm-pack is installed
+    ensure_wasm_pack(sh)?;
+    
+    let target = if release { "--release" } else { "--dev" };
+    
+    sh.change_dir("rune-wasm");
+    cmd!(sh, "wasm-pack build --target web {target}").run()?;
+    sh.change_dir("..");
+    
+    println!("✅ WASM Rune client build complete!");
     Ok(())
 }
 
@@ -353,6 +380,7 @@ fn test(sh: &Shell, release: bool) -> Result<()> {
     println!("  Testing WASM modules...");
     test_wasm_lsp(sh)?;
     test_wasm_builder(sh)?;
+    test_wasm_rune(sh)?;
     
     println!("✅ All tests passed!");
     Ok(())
@@ -380,6 +408,17 @@ fn test_wasm_builder(sh: &Shell) -> Result<()> {
     Ok(())
 }
 
+fn test_wasm_rune(sh: &Shell) -> Result<()> {
+    println!("🧪 Testing WASM Rune client module...");
+    
+    sh.change_dir("rune-wasm");
+    cmd!(sh, "cargo test").run()?;
+    sh.change_dir("..");
+    
+    println!("✅ WASM Rune client tests passed!");
+    Ok(())
+}
+
 fn lint(sh: &Shell) -> Result<()> {
     println!("🔍 Running lints...");
     
@@ -398,6 +437,10 @@ fn lint(sh: &Shell) -> Result<()> {
     sh.change_dir("..");
     
     sh.change_dir("builder-wasm");
+    cmd!(sh, "cargo clippy -- -D warnings").run()?;
+    sh.change_dir("..");
+    
+    sh.change_dir("rune-wasm");
     cmd!(sh, "cargo clippy -- -D warnings").run()?;
     sh.change_dir("..");
     
@@ -431,6 +474,14 @@ fn fmt(sh: &Shell, check: bool) -> Result<()> {
     }
     sh.change_dir("..");
     
+    sh.change_dir("rune-wasm");
+    if check {
+        cmd!(sh, "cargo fmt -- --check").run()?;
+    } else {
+        cmd!(sh, "cargo fmt").run()?;
+    }
+    sh.change_dir("..");
+    
     println!("✅ Formatting complete!");
     Ok(())
 }
@@ -447,6 +498,11 @@ fn clean(sh: &Shell) -> Result<()> {
     sh.change_dir("..");
     
     sh.change_dir("builder-wasm");
+    cmd!(sh, "cargo clean").run()?;
+    let _ = std::fs::remove_dir_all("pkg");
+    sh.change_dir("..");
+    
+    sh.change_dir("rune-wasm");
     cmd!(sh, "cargo clean").run()?;
     let _ = std::fs::remove_dir_all("pkg");
     sh.change_dir("..");
