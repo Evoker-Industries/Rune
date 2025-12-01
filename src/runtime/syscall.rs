@@ -332,8 +332,10 @@ pub fn getppid() -> u32 {
 /// Clone with namespaces
 ///
 /// # Safety
-/// The caller must ensure that `arg` points to valid memory that will remain valid
-/// for the duration of the clone operation and the callback execution.
+/// - The caller must ensure that `arg` points to valid memory that will remain valid
+///   for the duration of the clone operation and the callback execution.
+/// - The `callback` function must be safe to call from the cloned child process.
+/// - The `stack` must be a valid, properly aligned stack buffer with sufficient size.
 pub unsafe fn clone_with_namespaces(
     callback: extern "C" fn(*mut libc::c_void) -> i32,
     stack: &mut [u8],
