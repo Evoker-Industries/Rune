@@ -3,7 +3,6 @@
 //! Provides functionality for creating and managing container processes
 //! with proper namespace isolation.
 
-use super::cgroup::{CgroupConfig, CgroupManager};
 use super::mount::MountManager;
 use super::namespace::{NamespaceManager, NamespaceType};
 use super::syscall;
@@ -278,7 +277,7 @@ impl ContainerProcess {
                 .collect();
             let env_refs: Vec<&str> = env.iter().map(|s| s.as_str()).collect();
 
-            syscall::execve(&args[0], &args, &env_refs)
+            syscall::execve(args[0], &args, &env_refs)
                 .map_err(|e| RuneError::Runtime(format!("Failed to exec: {}", e)))?;
         }
 
@@ -329,10 +328,7 @@ impl ContainerProcess {
     pub fn is_running(&self) -> bool {
         if let Some(pid) = self.pid {
             // Check if process exists
-            match syscall::kill(pid as i32, 0) {
-                Ok(_) => true,
-                Err(_) => false,
-            }
+            syscall::kill(pid as i32, 0).is_ok()
         } else {
             false
         }
@@ -377,7 +373,7 @@ impl ContainerExec {
                     .collect();
                 let env_refs: Vec<&str> = env.iter().map(|s| s.as_str()).collect();
 
-                syscall::execve(&args[0], &args, &env_refs)
+                syscall::execve(args[0], &args, &env_refs)
                     .map_err(|e| RuneError::Runtime(format!("Failed to exec: {}", e)))?;
             }
 

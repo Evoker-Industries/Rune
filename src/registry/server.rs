@@ -232,6 +232,7 @@ pub struct UploadSession {
 }
 
 /// Registry server
+#[allow(dead_code)]
 pub struct RegistryServer {
     /// Configuration
     config: RegistryConfig,
@@ -560,8 +561,10 @@ mod tests {
     #[tokio::test]
     async fn test_registry_server_creation() {
         let temp = tempdir().unwrap();
-        let mut config = RegistryConfig::default();
-        config.storage_path = temp.path().to_path_buf();
+        let config = RegistryConfig {
+            storage_path: temp.path().to_path_buf(),
+            ..RegistryConfig::default()
+        };
 
         let server = RegistryServer::new(config).unwrap();
         assert_eq!(server.config.port, 5000);
@@ -570,8 +573,10 @@ mod tests {
     #[tokio::test]
     async fn test_check_api() {
         let temp = tempdir().unwrap();
-        let mut config = RegistryConfig::default();
-        config.storage_path = temp.path().to_path_buf();
+        let config = RegistryConfig {
+            storage_path: temp.path().to_path_buf(),
+            ..RegistryConfig::default()
+        };
 
         let server = RegistryServer::new(config).unwrap();
         assert!(server.check_api().await.is_ok());

@@ -45,7 +45,7 @@ impl CompletionProvider {
         snippet_support: bool,
     ) -> Vec<CompletionItem> {
         let lines: Vec<&str> = content.lines().collect();
-        let current_line = lines.get(line).map(|s| *s).unwrap_or("");
+        let current_line = lines.get(line).copied().unwrap_or("");
         let before_cursor = &current_line[..column.min(current_line.len())];
         let trimmed = before_cursor.trim();
 
@@ -67,10 +67,10 @@ impl CompletionProvider {
         // Context-specific completions
         let parts: Vec<&str> = trimmed.splitn(2, ' ').collect();
         let instruction = parts[0].to_uppercase();
-        let args = parts.get(1).map(|s| *s).unwrap_or("");
+        let args = parts.get(1).copied().unwrap_or("");
 
         match instruction.as_str() {
-            "FROM" => self.from_completions(args, parser),
+            "FROM" => self.complete_from_instruction(args, parser),
             "COPY" => self.copy_completions(args, parser),
             "RUN" => self.run_completions(args),
             "HEALTHCHECK" => self.healthcheck_completions(args, snippet_support),
@@ -104,7 +104,11 @@ impl CompletionProvider {
     }
 
     /// FROM completions
-    fn from_completions(&self, args: &str, _parser: &RunefileParser) -> Vec<CompletionItem> {
+    fn complete_from_instruction(
+        &self,
+        args: &str,
+        _parser: &RunefileParser,
+    ) -> Vec<CompletionItem> {
         let mut items = Vec::new();
 
         // Common base images

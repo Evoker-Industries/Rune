@@ -3,7 +3,7 @@
 use super::completion::CompletionProvider;
 use super::diagnostics::DiagnosticsProvider;
 use super::hover::HoverProvider;
-use super::syntax::{ErrorSeverity, InstructionKind, RunefileParser};
+use super::syntax::{InstructionKind, RunefileParser};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -11,6 +11,7 @@ use std::sync::{Arc, RwLock};
 /// LSP message types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "method")]
+#[allow(dead_code)]
 pub enum LspMessage {
     #[serde(rename = "initialize")]
     Initialize { id: i64, params: InitializeParams },
@@ -109,6 +110,7 @@ pub struct DidCloseParams {
 /// Document save params
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct DidSaveParams {
     pub text_document: TextDocumentIdentifier,
     pub text: Option<String>,
@@ -283,6 +285,7 @@ pub struct Diagnostic {
 
 /// Publish diagnostics params
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct PublishDiagnosticsParams {
     pub uri: String,
     pub diagnostics: Vec<Diagnostic>,
@@ -297,6 +300,7 @@ pub struct TextEdit {
 }
 
 /// Document state
+#[allow(dead_code)]
 struct DocumentState {
     content: String,
     version: i64,
@@ -456,24 +460,23 @@ impl RunefileLanguageServer {
 
                         // Find the FROM instruction that defines this stage
                         for i in &doc.parser.instructions {
-                            if i.kind == InstructionKind::From {
-                                if i.arguments.contains(&format!("AS {}", stage_name))
-                                    || i.arguments.contains(&format!("as {}", stage_name))
-                                {
-                                    return Some(Location {
-                                        uri: params.text_document.uri.clone(),
-                                        range: Range {
-                                            start: Position {
-                                                line: i.line as u32,
-                                                character: 0,
-                                            },
-                                            end: Position {
-                                                line: i.line as u32,
-                                                character: i.raw.len() as u32,
-                                            },
+                            if i.kind == InstructionKind::From
+                                && (i.arguments.contains(&format!("AS {}", stage_name))
+                                    || i.arguments.contains(&format!("as {}", stage_name)))
+                            {
+                                return Some(Location {
+                                    uri: params.text_document.uri.clone(),
+                                    range: Range {
+                                        start: Position {
+                                            line: i.line as u32,
+                                            character: 0,
                                         },
-                                    });
-                                }
+                                        end: Position {
+                                            line: i.line as u32,
+                                            character: i.raw.len() as u32,
+                                        },
+                                    },
+                                });
                             }
                         }
                     }

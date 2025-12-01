@@ -4,26 +4,21 @@ use crate::error::{Result, RuneError};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 use uuid::Uuid;
 
 /// Volume driver types
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum VolumeDriver {
     /// Local filesystem driver
+    #[default]
     Local,
     /// NFS driver
     Nfs,
     /// Custom driver
     Custom(String),
-}
-
-impl Default for VolumeDriver {
-    fn default() -> Self {
-        VolumeDriver::Local
-    }
 }
 
 impl std::fmt::Display for VolumeDriver {
@@ -37,19 +32,14 @@ impl std::fmt::Display for VolumeDriver {
 }
 
 /// Volume scope
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum VolumeScope {
     /// Local to this node
+    #[default]
     Local,
     /// Global (swarm)
     Global,
-}
-
-impl Default for VolumeScope {
-    fn default() -> Self {
-        VolumeScope::Local
-    }
 }
 
 /// Volume configuration
@@ -77,7 +67,7 @@ pub struct Volume {
 
 impl Volume {
     /// Create a new volume
-    pub fn new(name: &str, base_path: &PathBuf) -> Self {
+    pub fn new(name: &str, base_path: &Path) -> Self {
         Self {
             name: name.to_string(),
             driver: VolumeDriver::Local,

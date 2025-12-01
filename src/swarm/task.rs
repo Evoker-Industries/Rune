@@ -6,10 +6,11 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Task state
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TaskState {
     /// Task is new
+    #[default]
     New,
     /// Task is pending
     Pending,
@@ -37,12 +38,6 @@ pub enum TaskState {
     Remove,
     /// Task is orphaned
     Orphaned,
-}
-
-impl Default for TaskState {
-    fn default() -> Self {
-        TaskState::New
-    }
 }
 
 /// Swarm task

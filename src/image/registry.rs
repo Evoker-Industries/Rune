@@ -429,6 +429,7 @@ impl Registry {
 
 /// Token response from auth server
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct TokenResponse {
     token: String,
     #[serde(default)]
@@ -437,6 +438,7 @@ struct TokenResponse {
 
 /// Tags list response
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct TagsResponse {
     name: String,
     tags: Vec<String>,

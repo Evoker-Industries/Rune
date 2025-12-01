@@ -121,17 +121,17 @@ pub fn mount(
     use std::ffi::CString;
 
     let source_cstr = source
-        .map(|s| CString::new(s))
+        .map(CString::new)
         .transpose()
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid source path"))?;
     let target_cstr = CString::new(target)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid target path"))?;
     let fstype_cstr = fstype
-        .map(|s| CString::new(s))
+        .map(CString::new)
         .transpose()
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid fstype"))?;
     let data_cstr = data
-        .map(|s| CString::new(s))
+        .map(CString::new)
         .transpose()
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid data"))?;
 
@@ -330,7 +330,11 @@ pub fn getppid() -> u32 {
 }
 
 /// Clone with namespaces
-pub fn clone_with_namespaces(
+///
+/// # Safety
+/// The caller must ensure that `arg` points to valid memory that will remain valid
+/// for the duration of the clone operation and the callback execution.
+pub unsafe fn clone_with_namespaces(
     callback: extern "C" fn(*mut libc::c_void) -> i32,
     stack: &mut [u8],
     flags: i32,

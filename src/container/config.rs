@@ -126,11 +126,12 @@ impl Default for ContainerConfig {
 impl ContainerConfig {
     /// Create a new container configuration
     pub fn new(name: &str, image: &str) -> Self {
-        let mut config = Self::default();
-        config.name = name.to_string();
-        config.image = image.to_string();
-        config.hostname = name.to_string();
-        config
+        Self {
+            name: name.to_string(),
+            image: image.to_string(),
+            hostname: name.to_string(),
+            ..Self::default()
+        }
     }
 
     /// Set command to run
@@ -197,7 +198,7 @@ pub struct VolumeMount {
 }
 
 /// Resource limits
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ResourceLimits {
     /// Memory limit in bytes
     pub memory_limit: Option<u64>,
@@ -213,18 +214,4 @@ pub struct ResourceLimits {
     pub cpus: Option<f64>,
     /// PIDs limit
     pub pids_limit: Option<i64>,
-}
-
-impl Default for ResourceLimits {
-    fn default() -> Self {
-        Self {
-            memory_limit: None,
-            memory_reservation: None,
-            cpu_shares: None,
-            cpu_quota: None,
-            cpu_period: None,
-            cpus: None,
-            pids_limit: None,
-        }
-    }
 }

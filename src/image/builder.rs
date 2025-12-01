@@ -204,8 +204,8 @@ impl ImageBuilder {
             }
 
             // Handle line continuation
-            if line.ends_with('\\') {
-                continued_line.push_str(&line[..line.len() - 1]);
+            if let Some(line_without_backslash) = line.strip_suffix('\\') {
+                continued_line.push_str(line_without_backslash);
                 continued_line.push(' ');
                 continue;
             }

@@ -3,7 +3,7 @@
 use super::config::{ContainerConfig, ContainerStatus};
 use crate::error::{Result, RuneError};
 use chrono::Utc;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Container instance
 #[derive(Debug)]
@@ -18,7 +18,7 @@ pub struct Container {
 
 impl Container {
     /// Create a new container
-    pub fn new(config: ContainerConfig, base_path: &PathBuf) -> Result<Self> {
+    pub fn new(config: ContainerConfig, base_path: &Path) -> Result<Self> {
         let container_path = base_path.join(&config.id);
         let rootfs = container_path.join("rootfs");
         let bundle = container_path.clone();

@@ -310,8 +310,7 @@ fn matches_repository(pattern: &str, repository: &str) -> bool {
         return true;
     }
 
-    if pattern.ends_with("/*") {
-        let prefix = &pattern[..pattern.len() - 2];
+    if let Some(prefix) = pattern.strip_suffix("/*") {
         return repository.starts_with(prefix);
     }
 

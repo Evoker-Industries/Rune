@@ -8,10 +8,11 @@ use std::net::Ipv4Addr;
 use uuid::Uuid;
 
 /// Network driver types
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum NetworkDriver {
     /// Bridge network (default)
+    #[default]
     Bridge,
     /// Host network
     Host,
@@ -23,12 +24,6 @@ pub enum NetworkDriver {
     Macvlan,
     /// IPvlan network
     Ipvlan,
-}
-
-impl Default for NetworkDriver {
-    fn default() -> Self {
-        NetworkDriver::Bridge
-    }
 }
 
 impl std::fmt::Display for NetworkDriver {
@@ -45,21 +40,16 @@ impl std::fmt::Display for NetworkDriver {
 }
 
 /// Network scope
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum NetworkScope {
     /// Local to this node
+    #[default]
     Local,
     /// Swarm-wide
     Swarm,
     /// Global
     Global,
-}
-
-impl Default for NetworkScope {
-    fn default() -> Self {
-        NetworkScope::Local
-    }
 }
 
 /// Network configuration
@@ -116,9 +106,10 @@ impl Default for NetworkConfig {
 impl NetworkConfig {
     /// Create a new network configuration
     pub fn new(name: &str) -> Self {
-        let mut config = Self::default();
-        config.name = name.to_string();
-        config
+        Self {
+            name: name.to_string(),
+            ..Self::default()
+        }
     }
 
     /// Set network driver
@@ -222,6 +213,7 @@ pub struct NetworkContainer {
 }
 
 /// IP address allocator
+#[allow(dead_code)]
 pub struct IpAllocator {
     /// Network subnet
     subnet: String,

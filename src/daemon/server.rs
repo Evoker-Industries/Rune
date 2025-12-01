@@ -147,7 +147,7 @@ impl RuneDaemon {
         debug!("Received request: {}", request_line.trim());
 
         // Parse HTTP request line
-        let parts: Vec<&str> = request_line.trim().split_whitespace().collect();
+        let parts: Vec<&str> = request_line.split_whitespace().collect();
         if parts.len() < 2 {
             Self::send_error(stream, 400, "Bad Request")?;
             return Ok(());

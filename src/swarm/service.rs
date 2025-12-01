@@ -1,6 +1,5 @@
 //! Swarm service management
 
-use super::task::{Task, TaskState};
 use crate::error::{Result, RuneError};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -83,13 +82,11 @@ impl Service {
 
     /// Scale the service
     pub fn scale(&mut self, replicas: u64) {
-        if let Some(ref mut mode) = self.spec.mode {
-            if let ServiceMode::Replicated {
-                replicas: ref mut r,
-            } = mode
-            {
-                *r = replicas;
-            }
+        if let Some(ServiceMode::Replicated {
+            replicas: ref mut r,
+        }) = self.spec.mode
+        {
+            *r = replicas;
         }
         self.version.index += 1;
         self.updated_at = Utc::now();
@@ -104,7 +101,7 @@ impl Service {
                 ServiceMode::Replicated { replicas } => *replicas,
                 ServiceMode::Global => 0,
                 ServiceMode::ReplicatedJob {
-                    max_concurrent,
+                    max_concurrent: _,
                     total_completions,
                 } => *total_completions,
                 ServiceMode::GlobalJob => 0,

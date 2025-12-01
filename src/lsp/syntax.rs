@@ -31,7 +31,7 @@ pub enum InstructionKind {
 
 impl InstructionKind {
     /// Parse instruction from string
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse(s: &str) -> Self {
         match s.to_uppercase().as_str() {
             "FROM" => Self::From,
             "RUN" => Self::Run,
@@ -404,11 +404,11 @@ impl RunefileParser {
             let trimmed = line.trim();
 
             // Handle line continuations
-            if trimmed.ends_with('\\') {
+            if let Some(trimmed_without_backslash) = trimmed.strip_suffix('\\') {
                 if continuation_buffer.is_empty() {
                     continuation_start_line = line_num;
                 }
-                continuation_buffer.push_str(&trimmed[..trimmed.len() - 1]);
+                continuation_buffer.push_str(trimmed_without_backslash);
                 continuation_buffer.push(' ');
                 continue;
             }
@@ -453,11 +453,11 @@ impl RunefileParser {
         if trimmed.starts_with('#') {
             // Check for parser directives
             if line_num == 0 || self.instructions.is_empty() {
-                if let Some(directive) = trimmed.strip_prefix("# syntax=") {
+                if let Some(_directive) = trimmed.strip_prefix("# syntax=") {
                     // Syntax directive - valid
                     return;
                 }
-                if let Some(directive) = trimmed.strip_prefix("# escape=") {
+                if let Some(_directive) = trimmed.strip_prefix("# escape=") {
                     // Escape directive - valid
                     return;
                 }
@@ -466,7 +466,7 @@ impl RunefileParser {
             self.instructions.push(Instruction {
                 kind: InstructionKind::Comment,
                 raw: line.to_string(),
-                arguments: trimmed[1..].trim().to_string(),
+                arguments: trimmed.strip_prefix('#').unwrap_or("").trim().to_string(),
                 line: line_num,
                 column: 0,
                 keyword_span: (0, 1),
@@ -483,7 +483,7 @@ impl RunefileParser {
 
         let keyword = parts[0];
         let arguments = parts.get(1).map(|s| s.trim()).unwrap_or("");
-        let kind = InstructionKind::from_str(keyword);
+        let kind = InstructionKind::parse(keyword);
 
         let keyword_start = line.find(keyword).unwrap_or(0);
         let keyword_end = keyword_start + keyword.len();
@@ -639,7 +639,7 @@ impl RunefileParser {
             .instructions
             .iter()
             .filter(|inst| inst.kind == InstructionKind::Healthcheck)
-            .filter_map(|inst| Self::check_healthcheck(inst))
+            .filter_map(Self::check_healthcheck)
             .collect();
 
         self.errors.extend(healthcheck_issues);

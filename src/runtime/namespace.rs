@@ -5,8 +5,8 @@
 
 use super::syscall::{clone_flags, unshare};
 use crate::error::{Result, RuneError};
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Write};
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::path::Path;
 
 /// Types of Linux namespaces

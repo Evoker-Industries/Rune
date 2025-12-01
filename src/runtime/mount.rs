@@ -343,7 +343,7 @@ impl MountManager {
             ("tty", 5, 0, 0o666),
         ];
 
-        for (name, major, minor, mode) in devices {
+        for (name, _major, _minor, _mode) in devices {
             let path = format!("{}/{}", dev_path, name);
 
             // Skip if already exists

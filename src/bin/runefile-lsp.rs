@@ -16,7 +16,7 @@ fn main() {
 
     info!("Starting Runefile Language Server");
 
-    let mut server = RunefileLanguageServer::new();
+    let _server = RunefileLanguageServer::new();
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let reader = BufReader::new(stdin.lock());

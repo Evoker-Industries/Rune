@@ -12,9 +12,7 @@ use crossterm::{
 };
 use ratatui::{
     prelude::*,
-    widgets::{
-        Block, Borders, Clear, List, ListItem, ListState, Paragraph, Row, Table, TableState, Tabs,
-    },
+    widgets::{Block, Borders, Clear, Paragraph, Row, Table, TableState, Tabs},
 };
 use std::io;
 use std::sync::Arc;
@@ -414,7 +412,7 @@ impl App {
             .containers
             .iter()
             .map(|c| {
-                let status_color = match c.status {
+                let _status_color = match c.status {
                     ContainerStatus::Running => Color::Green,
                     ContainerStatus::Paused => Color::Yellow,
                     ContainerStatus::Stopped | ContainerStatus::Exited => Color::Red,

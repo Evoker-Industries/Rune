@@ -146,18 +146,10 @@ pub struct ExternalCa {
 }
 
 /// Encryption configuration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct EncryptionConfig {
     /// Auto-lock managers
     pub auto_lock_managers: bool,
-}
-
-impl Default for EncryptionConfig {
-    fn default() -> Self {
-        Self {
-            auto_lock_managers: false,
-        }
-    }
 }
 
 /// Swarm cluster state
@@ -184,6 +176,7 @@ pub enum TokenType {
 }
 
 /// Swarm cluster
+#[allow(dead_code)]
 pub struct SwarmCluster {
     /// Cluster ID
     id: String,
@@ -248,7 +241,7 @@ impl SwarmCluster {
     /// Join an existing swarm
     pub fn join(
         join_token: &str,
-        remote_addrs: Vec<String>,
+        _remote_addrs: Vec<String>,
         listen_addr: &str,
         advertise_addr: &str,
     ) -> Result<Self> {

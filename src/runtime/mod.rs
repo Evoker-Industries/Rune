@@ -15,7 +15,7 @@ pub use mount::MountManager;
 pub use namespace::{Namespace, NamespaceType};
 pub use process::{ContainerProcess, ProcessConfig};
 
-use crate::error::{Result, RuneError};
+use crate::error::Result;
 
 /// Container runtime configuration
 #[derive(Debug, Clone)]

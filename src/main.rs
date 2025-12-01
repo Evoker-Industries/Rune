@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 use rune::compose::{ComposeOrchestrator, ComposeParser};
 use rune::container::{ContainerConfig, ContainerManager};
 use rune::error::Result;
-use rune::image::builder::{BuildContext, ImageBuilder, DEFAULT_BUILD_FILE};
+use rune::image::builder::{BuildContext, ImageBuilder};
 use rune::swarm::{SwarmCluster, SwarmConfig};
 use rune::tui::App;
 use std::path::PathBuf;
@@ -653,15 +653,14 @@ async fn main() -> Result<()> {
             image,
             name,
             detach,
-            publish,
+            publish: _,
             env,
-            volume,
+            volume: _,
             workdir,
             command,
         } => {
-            let container_name = name.unwrap_or_else(|| {
-                format!("rune-{}", uuid::Uuid::new_v4().to_string()[..8].to_string())
-            });
+            let container_name =
+                name.unwrap_or_else(|| format!("rune-{}", &uuid::Uuid::new_v4().to_string()[..8]));
 
             let mut config = ContainerConfig::new(&container_name, &image);
 
@@ -693,9 +692,8 @@ async fn main() -> Result<()> {
         }
 
         Commands::Create { image, name } => {
-            let container_name = name.unwrap_or_else(|| {
-                format!("rune-{}", uuid::Uuid::new_v4().to_string()[..8].to_string())
-            });
+            let container_name =
+                name.unwrap_or_else(|| format!("rune-{}", &uuid::Uuid::new_v4().to_string()[..8]));
 
             let config = ContainerConfig::new(&container_name, &image);
             let id = container_manager.create(config)?;
@@ -750,8 +748,8 @@ async fn main() -> Result<()> {
 
         Commands::Logs {
             container,
-            follow,
-            tail,
+            follow: _,
+            tail: _,
         } => {
             println!("Fetching logs for container {}...", container);
             // In a real implementation, we would stream container logs
@@ -759,8 +757,8 @@ async fn main() -> Result<()> {
 
         Commands::Exec {
             container,
-            tty,
-            interactive,
+            tty: _,
+            interactive: _,
             command,
         } => {
             println!("Executing {:?} in container {}", command, container);
@@ -804,7 +802,7 @@ async fn main() -> Result<()> {
 
         Commands::Image { command } => {
             match command {
-                ImageCommands::List { all } => {
+                ImageCommands::List { all: _ } => {
                     println!("REPOSITORY          TAG       IMAGE ID       SIZE");
                     // List images
                 }
@@ -814,19 +812,19 @@ async fn main() -> Result<()> {
                 ImageCommands::Push { name } => {
                     println!("Pushing image {}...", name);
                 }
-                ImageCommands::Remove { image, force } => {
+                ImageCommands::Remove { image, force: _ } => {
                     println!("Removing image {}...", image);
                 }
                 ImageCommands::Tag { source, target } => {
                     println!("Tagging {} as {}", source, target);
                 }
-                ImageCommands::History { image } => {
+                ImageCommands::History { image: _ } => {
                     println!("IMAGE          CREATED       CREATED BY                                      SIZE");
                 }
                 ImageCommands::Inspect { image } => {
                     println!("Inspecting image {}...", image);
                 }
-                ImageCommands::Prune { all, force } => {
+                ImageCommands::Prune { all: _, force: _ } => {
                     println!("Pruning unused images...");
                 }
             }
@@ -841,9 +839,9 @@ async fn main() -> Result<()> {
             }
             NetworkCommands::Create {
                 name,
-                driver,
-                subnet,
-                gateway,
+                driver: _,
+                subnet: _,
+                gateway: _,
             } => {
                 println!("Created network {}", name);
             }
@@ -859,7 +857,7 @@ async fn main() -> Result<()> {
             NetworkCommands::Disconnect { network, container } => {
                 println!("Disconnected {} from {}", container, network);
             }
-            NetworkCommands::Prune { force } => {
+            NetworkCommands::Prune { force: _ } => {
                 println!("Pruning unused networks...");
             }
         },
@@ -868,18 +866,18 @@ async fn main() -> Result<()> {
             VolumeCommands::List => {
                 println!("DRIVER    VOLUME NAME");
             }
-            VolumeCommands::Create { name, driver } => {
+            VolumeCommands::Create { name, driver: _ } => {
                 let vol_name =
                     name.unwrap_or_else(|| uuid::Uuid::new_v4().to_string()[..12].to_string());
                 println!("{}", vol_name);
             }
-            VolumeCommands::Remove { volume, force } => {
+            VolumeCommands::Remove { volume, force: _ } => {
                 println!("Removed volume {}", volume);
             }
             VolumeCommands::Inspect { volume } => {
                 println!("Inspecting volume {}...", volume);
             }
-            VolumeCommands::Prune { force } => {
+            VolumeCommands::Prune { force: _ } => {
                 println!("Pruning unused volumes...");
             }
         },
@@ -892,7 +890,7 @@ async fn main() -> Result<()> {
                     file,
                     detach,
                     build,
-                    scale,
+                    scale: _,
                 } => {
                     let compose_file = file.unwrap_or_else(|| {
                         ComposeParser::find_compose_file(&working_dir)
@@ -918,33 +916,46 @@ async fn main() -> Result<()> {
                     orchestrator.up(detach, build).await?;
                     println!("Started project {}", project_name);
                 }
-                ComposeCommands::Down { file, volumes, rmi } => {
+                ComposeCommands::Down {
+                    file: _,
+                    volumes: _,
+                    rmi: _,
+                } => {
                     println!("Stopping compose project...");
                 }
-                ComposeCommands::Ps { file } => {
+                ComposeCommands::Ps { file: _ } => {
                     println!("NAME      SERVICE   STATUS    PORTS");
                 }
                 ComposeCommands::Logs {
-                    file,
-                    service,
-                    follow,
+                    file: _,
+                    service: _,
+                    follow: _,
                 } => {
                     println!("Fetching compose logs...");
                 }
                 ComposeCommands::Build {
-                    file,
-                    service,
-                    no_cache,
+                    file: _,
+                    service: _,
+                    no_cache: _,
                 } => {
                     println!("Building compose services...");
                 }
-                ComposeCommands::Start { file, services } => {
+                ComposeCommands::Start {
+                    file: _,
+                    services: _,
+                } => {
                     println!("Starting services...");
                 }
-                ComposeCommands::Stop { file, services } => {
+                ComposeCommands::Stop {
+                    file: _,
+                    services: _,
+                } => {
                     println!("Stopping services...");
                 }
-                ComposeCommands::Restart { file, services } => {
+                ComposeCommands::Restart {
+                    file: _,
+                    services: _,
+                } => {
                     println!("Restarting services...");
                 }
                 ComposeCommands::Config { file } => {
@@ -971,12 +982,12 @@ async fn main() -> Result<()> {
                 advertise_addr,
                 force_new_cluster,
             } => {
-                let mut config = SwarmConfig::default();
-                config.listen_addr = listen_addr;
-                if let Some(addr) = advertise_addr {
-                    config.advertise_addr = addr;
-                }
-                config.force_new_cluster = force_new_cluster;
+                let config = SwarmConfig {
+                    listen_addr,
+                    advertise_addr: advertise_addr.unwrap_or_else(|| "0.0.0.0:2377".to_string()),
+                    force_new_cluster,
+                    ..SwarmConfig::default()
+                };
 
                 let cluster = SwarmCluster::init(config)?;
                 println!(
@@ -994,25 +1005,25 @@ async fn main() -> Result<()> {
                     cluster.join_token(rune::swarm::cluster::TokenType::Manager)
                 );
             }
-            SwarmCommands::Join { token, remote } => {
+            SwarmCommands::Join { token: _, remote } => {
                 println!("Joining swarm at {}...", remote);
             }
-            SwarmCommands::Leave { force } => {
+            SwarmCommands::Leave { force: _ } => {
                 println!("Leaving swarm...");
             }
-            SwarmCommands::JoinToken { role, rotate } => {
+            SwarmCommands::JoinToken { role, rotate: _ } => {
                 println!("Join token for {}: SWMTKN-...", role);
             }
             SwarmCommands::Update {
-                autolock,
-                task_history_limit,
+                autolock: _,
+                task_history_limit: _,
             } => {
                 println!("Swarm updated");
             }
             SwarmCommands::Unlock => {
                 println!("Please enter unlock key:");
             }
-            SwarmCommands::UnlockKey { rotate } => {
+            SwarmCommands::UnlockKey { rotate: _ } => {
                 println!("Unlock key: SWMKEY-...");
             }
         },
@@ -1023,19 +1034,19 @@ async fn main() -> Result<()> {
             }
             ServiceCommands::Create {
                 name,
-                image,
-                replicas,
-                publish,
-                env,
-                mount,
+                image: _,
+                replicas: _,
+                publish: _,
+                env: _,
+                mount: _,
             } => {
                 println!("Created service {}", name);
             }
             ServiceCommands::Update {
                 service,
-                image,
-                replicas,
-                force,
+                image: _,
+                replicas: _,
+                force: _,
             } => {
                 println!("Updated service {}", service);
             }
@@ -1055,10 +1066,10 @@ async fn main() -> Result<()> {
             ServiceCommands::Inspect { service } => {
                 println!("Inspecting service {}...", service);
             }
-            ServiceCommands::Logs { service, follow } => {
+            ServiceCommands::Logs { service, follow: _ } => {
                 println!("Fetching logs for service {}...", service);
             }
-            ServiceCommands::Ps { service } => {
+            ServiceCommands::Ps { service: _ } => {
                 println!("ID             NAME              IMAGE     NODE      DESIRED STATE   CURRENT STATE");
             }
         },
@@ -1072,10 +1083,10 @@ async fn main() -> Result<()> {
             }
             NodeCommands::Update {
                 node,
-                availability,
-                role,
-                label_add,
-                label_rm,
+                availability: _,
+                role: _,
+                label_add: _,
+                label_rm: _,
             } => {
                 println!("Updated node {}", node);
             }
@@ -1089,10 +1100,10 @@ async fn main() -> Result<()> {
                     println!("Node {} demoted to worker", node);
                 }
             }
-            NodeCommands::Remove { node, force } => {
+            NodeCommands::Remove { node, force: _ } => {
                 println!("Removed node {}", node);
             }
-            NodeCommands::Ps { node } => {
+            NodeCommands::Ps { node: _ } => {
                 println!(
                     "ID             NAME              IMAGE     DESIRED STATE   CURRENT STATE"
                 );

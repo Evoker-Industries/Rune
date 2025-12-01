@@ -264,8 +264,8 @@ impl ComposeOrchestrator {
     pub async fn logs(
         &self,
         service_name: Option<&str>,
-        follow: bool,
-        tail: Option<usize>,
+        _follow: bool,
+        _tail: Option<usize>,
     ) -> Result<Vec<String>> {
         let mut logs = Vec::new();
 

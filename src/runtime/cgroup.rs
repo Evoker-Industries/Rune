@@ -4,7 +4,7 @@
 //! for container resource isolation and limits.
 
 use crate::error::{Result, RuneError};
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -300,7 +300,7 @@ impl CgroupManager {
         }
         if let Some(shares) = config.cpu_shares {
             // Convert shares to weight (shares 1024 = weight 100)
-            let weight = std::cmp::max(1, std::cmp::min(10000, (shares * 100) / 1024));
+            let weight = ((shares * 100) / 1024).clamp(1, 10000);
             self.write_cgroup_file(&container_path.join("cpu.weight"), &weight.to_string())?;
         }
 
@@ -320,7 +320,7 @@ impl CgroupManager {
         // IO weight
         if let Some(weight) = config.blkio_weight {
             // Convert to cgroup v2 io.weight (1-10000)
-            let io_weight = std::cmp::max(1, std::cmp::min(10000, weight as u64));
+            let io_weight = (weight as u64).clamp(1, 10000);
             self.write_cgroup_file(&container_path.join("io.weight"), &io_weight.to_string())?;
         }
 

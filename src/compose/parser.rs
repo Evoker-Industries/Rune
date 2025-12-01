@@ -198,10 +198,8 @@ impl ComposeParser {
             if let Some(ref mut environment) = service.environment {
                 match environment {
                     super::config::EnvironmentConfig::Map(map) => {
-                        for value in map.values_mut() {
-                            if let Some(v) = value {
-                                *v = interpolate_string(v, env);
-                            }
+                        for value in map.values_mut().flatten() {
+                            *value = interpolate_string(value, env);
                         }
                     }
                     super::config::EnvironmentConfig::Array(arr) => {

@@ -1,7 +1,7 @@
 //! Hover Provider for Runefile LSP
 
 use super::server::{Hover, MarkupContent, Position, Range};
-use super::syntax::{InstructionKind, RunefileParser};
+use super::syntax::RunefileParser;
 
 /// Hover provider for Runefile
 pub struct HoverProvider {}
@@ -15,7 +15,7 @@ impl HoverProvider {
     /// Get hover information at the given position
     pub fn get_hover(
         &self,
-        content: &str,
+        _content: &str,
         parser: &RunefileParser,
         line: usize,
         column: usize,

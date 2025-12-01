@@ -464,6 +464,7 @@ pub struct ExecProcessConfig {
 
 /// Container attach options
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct AttachOptions {
     pub stream: bool,
     pub stdin: bool,
@@ -475,6 +476,7 @@ pub struct AttachOptions {
 
 /// Exec instance stored in memory
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct ExecInstance {
     pub id: String,
     pub container_id: String,
@@ -756,8 +758,10 @@ impl ApiHandler {
                 // URL decode and parse JSON filter
                 if let Ok(decoded) = urlencoding_decode(filter_str) {
                     if let Ok(filters) = serde_json::from_str::<Value>(&decoded) {
-                        if let Some(labels) = filters.get("label").and_then(|v| v.as_array()) {
-                            Some(
+                        filters
+                            .get("label")
+                            .and_then(|v| v.as_array())
+                            .map(|labels| {
                                 labels
                                     .iter()
                                     .filter_map(|l| {
@@ -769,11 +773,8 @@ impl ApiHandler {
                                             }
                                         })
                                     })
-                                    .collect(),
-                            )
-                        } else {
-                            None
-                        }
+                                    .collect()
+                            })
                     } else {
                         None
                     }
@@ -1604,7 +1605,7 @@ impl ApiHandler {
         });
 
         // Get and update exec instance
-        let instance = {
+        let _instance = {
             let mut instances = self.exec_instances.write().unwrap();
             if let Some(instance) = instances.get_mut(exec_id) {
                 instance.running = true;
@@ -1958,7 +1959,7 @@ impl ApiHandler {
     }
 
     // Distribution methods
-    fn get_distribution_info(&self, image: &str) -> Result<String> {
+    fn get_distribution_info(&self, _image: &str) -> Result<String> {
         Ok(json!({
             "Descriptor": {
                 "mediaType": "application/vnd.docker.distribution.manifest.v2+json",

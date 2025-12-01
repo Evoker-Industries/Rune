@@ -186,6 +186,7 @@ pub struct ServiceConfig {
 /// Build configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
+#[allow(clippy::large_enum_variant)]
 pub enum BuildConfig {
     /// Simple context path
     Simple(String),

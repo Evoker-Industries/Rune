@@ -7,26 +7,22 @@ use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Node role in the swarm
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum NodeRole {
     /// Worker node
+    #[default]
     Worker,
     /// Manager node
     Manager,
 }
 
-impl Default for NodeRole {
-    fn default() -> Self {
-        NodeRole::Worker
-    }
-}
-
 /// Node state
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum NodeState {
     /// Node is unknown
+    #[default]
     Unknown,
     /// Node is down
     Down,
@@ -36,28 +32,17 @@ pub enum NodeState {
     Disconnected,
 }
 
-impl Default for NodeState {
-    fn default() -> Self {
-        NodeState::Unknown
-    }
-}
-
 /// Node availability
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum NodeAvailability {
     /// Node is active
+    #[default]
     Active,
     /// Node is paused
     Pause,
     /// Node is draining
     Drain,
-}
-
-impl Default for NodeAvailability {
-    fn default() -> Self {
-        NodeAvailability::Active
-    }
 }
 
 /// Swarm node
@@ -371,6 +356,6 @@ mod tests {
         assert_eq!(node.labels.get("env"), Some(&"production".to_string()));
 
         node.remove_label("env");
-        assert!(node.labels.get("env").is_none());
+        assert!(!node.labels.contains_key("env"));
     }
 }

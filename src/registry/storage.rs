@@ -90,6 +90,7 @@ impl RegistryStorage {
     }
 
     /// List nested repositories
+    #[allow(clippy::only_used_in_recursion)]
     fn list_nested_repos<'a>(
         &'a self,
         path: &'a PathBuf,
@@ -148,6 +149,7 @@ impl RegistryStorage {
     }
 
     /// Get manifest info (content type and size)
+    #[allow(clippy::type_complexity)]
     pub fn get_manifest_info<'a>(
         &'a self,
         name: &'a str,
@@ -454,10 +456,9 @@ impl RegistryStorage {
             while let Some(entry) = entries.next_entry().await? {
                 if let Some(hash) = entry.file_name().to_str() {
                     let digest = format!("sha256:{}", hash);
-                    if !referenced.contains(&digest) {
-                        if fs::remove_file(entry.path()).await.is_ok() {
-                            deleted.push(digest);
-                        }
+                    if !referenced.contains(&digest) && fs::remove_file(entry.path()).await.is_ok()
+                    {
+                        deleted.push(digest);
                     }
                 }
             }
