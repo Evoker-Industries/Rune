@@ -383,9 +383,9 @@ impl WasmBuilder {
     }
 }
 
-/// Simple timestamp function (no chrono dependency)
+/// Simple timestamp function
 fn chrono_lite_now() -> String {
-    "2024-01-01T00:00:00Z".to_string()
+    js_sys::Date::new_0().to_iso_string().into()
 }
 
 #[cfg(test)]

@@ -58,11 +58,12 @@ impl LocalContainerManager {
         }
     }
 
-    /// Generate a new container ID
+    /// Generate a new container ID with randomness
     fn generate_id(&mut self) -> String {
         self.id_counter += 1;
         let timestamp = js_sys::Date::now() as u64;
-        format!("{:012x}{:04x}", timestamp, self.id_counter)
+        let random = (js_sys::Math::random() * u32::MAX as f64) as u32;
+        format!("{:012x}{:04x}{:08x}", timestamp, self.id_counter, random)
     }
 
     /// Create a container (local only)

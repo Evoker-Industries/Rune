@@ -193,6 +193,7 @@ fn project_root() -> Result<PathBuf> {
         .context("Failed to find project root")
 }
 
+#[allow(dead_code)]
 fn build(sh: &Shell, release: bool) -> Result<()> {
     println!("🔨 Building Rune...");
     
