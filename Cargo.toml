@@ -1,3 +1,7 @@
+[workspace]
+members = [".", "xtask", "lsp-wasm", "builder-wasm"]
+resolver = "2"
+
 [package]
 name = "rune"
 version = "0.1.0"
@@ -80,6 +84,12 @@ walkdir = "2"
 
 [dev-dependencies]
 tempfile = "3"
+
+# Workspace-level profiles for WASM builds
+[profile.release-wasm]
+inherits = "release"
+opt-level = "s"
+lto = true
 
 [[bin]]
 name = "rune"
