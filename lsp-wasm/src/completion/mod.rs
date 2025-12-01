@@ -24,7 +24,7 @@ impl CompletionProvider {
     #[wasm_bindgen(js_name = getCompletions)]
     pub fn get_completions(&self, content: &str, line: u32, character: u32) -> String {
         let lines: Vec<&str> = content.lines().collect();
-        
+
         if (line as usize) >= lines.len() {
             return self.get_instruction_completions();
         }
@@ -72,7 +72,11 @@ impl CompletionProvider {
             self.instruction_completion("COPY", "Copy files", "COPY ${1:src} ${2:dest}"),
             self.instruction_completion("ADD", "Add files", "ADD ${1:src} ${2:dest}"),
             self.instruction_completion("CMD", "Default command", "CMD [\"${1:command}\"]"),
-            self.instruction_completion("ENTRYPOINT", "Entry point", "ENTRYPOINT [\"${1:command}\"]"),
+            self.instruction_completion(
+                "ENTRYPOINT",
+                "Entry point",
+                "ENTRYPOINT [\"${1:command}\"]",
+            ),
             self.instruction_completion("ENV", "Environment variable", "ENV ${1:KEY}=${2:value}"),
             self.instruction_completion("EXPOSE", "Expose port", "EXPOSE ${1:port}"),
             self.instruction_completion("WORKDIR", "Working directory", "WORKDIR ${1:/app}"),
@@ -80,8 +84,16 @@ impl CompletionProvider {
             self.instruction_completion("VOLUME", "Mount point", "VOLUME ${1:/data}"),
             self.instruction_completion("ARG", "Build argument", "ARG ${1:name}=${2:default}"),
             self.instruction_completion("LABEL", "Metadata label", "LABEL ${1:key}=\"${2:value}\""),
-            self.instruction_completion("HEALTHCHECK", "Health check", "HEALTHCHECK CMD ${1:command}"),
-            self.instruction_completion("SHELL", "Default shell", "SHELL [\"${1:/bin/bash}\", \"-c\"]"),
+            self.instruction_completion(
+                "HEALTHCHECK",
+                "Health check",
+                "HEALTHCHECK CMD ${1:command}",
+            ),
+            self.instruction_completion(
+                "SHELL",
+                "Default shell",
+                "SHELL [\"${1:/bin/bash}\", \"-c\"]",
+            ),
             self.instruction_completion("STOPSIGNAL", "Stop signal", "STOPSIGNAL ${1:SIGTERM}"),
         ];
 
@@ -89,8 +101,10 @@ impl CompletionProvider {
     }
 
     fn get_filtered_instruction_completions(&self, prefix: &str) -> String {
-        let all: Vec<CompletionItem> = serde_json::from_str(&self.get_instruction_completions()).unwrap_or_default();
-        let filtered: Vec<CompletionItem> = all.into_iter()
+        let all: Vec<CompletionItem> =
+            serde_json::from_str(&self.get_instruction_completions()).unwrap_or_default();
+        let filtered: Vec<CompletionItem> = all
+            .into_iter()
             .filter(|c| c.label.to_uppercase().starts_with(prefix))
             .collect();
         serde_json::to_string(&filtered).unwrap_or_else(|_| "[]".to_string())
@@ -113,10 +127,26 @@ impl CompletionProvider {
 
     fn get_run_completions(&self) -> String {
         let completions = vec![
-            self.snippet_completion("apt-get install", "Install packages (Debian)", "apt-get update && apt-get install -y ${1:package}"),
-            self.snippet_completion("apk add", "Install packages (Alpine)", "apk add --no-cache ${1:package}"),
-            self.snippet_completion("pip install", "Install Python packages", "pip install --no-cache-dir ${1:package}"),
-            self.snippet_completion("npm install", "Install Node packages", "npm install ${1:package}"),
+            self.snippet_completion(
+                "apt-get install",
+                "Install packages (Debian)",
+                "apt-get update && apt-get install -y ${1:package}",
+            ),
+            self.snippet_completion(
+                "apk add",
+                "Install packages (Alpine)",
+                "apk add --no-cache ${1:package}",
+            ),
+            self.snippet_completion(
+                "pip install",
+                "Install Python packages",
+                "pip install --no-cache-dir ${1:package}",
+            ),
+            self.snippet_completion(
+                "npm install",
+                "Install Node packages",
+                "npm install ${1:package}",
+            ),
             self.snippet_completion("cargo build", "Build Rust project", "cargo build --release"),
             self.snippet_completion("chmod", "Change permissions", "chmod +x ${1:file}"),
             self.snippet_completion("mkdir", "Create directory", "mkdir -p ${1:/app}"),
@@ -126,11 +156,23 @@ impl CompletionProvider {
 
     fn get_copy_completions(&self) -> String {
         let completions = vec![
-            self.snippet_completion("--from", "Copy from stage", "--from=${1:builder} ${2:src} ${3:dest}"),
-            self.snippet_completion("--chown", "Set ownership", "--chown=${1:user}:${2:group} ${3:src} ${4:dest}"),
+            self.snippet_completion(
+                "--from",
+                "Copy from stage",
+                "--from=${1:builder} ${2:src} ${3:dest}",
+            ),
+            self.snippet_completion(
+                "--chown",
+                "Set ownership",
+                "--chown=${1:user}:${2:group} ${3:src} ${4:dest}",
+            ),
             self.snippet_completion(". .", "Copy current dir", ". ."),
             self.snippet_completion("package.json", "Copy package.json", "package*.json ./"),
-            self.snippet_completion("requirements.txt", "Copy requirements", "requirements.txt ."),
+            self.snippet_completion(
+                "requirements.txt",
+                "Copy requirements",
+                "requirements.txt .",
+            ),
         ];
         serde_json::to_string(&completions).unwrap_or_else(|_| "[]".to_string())
     }
@@ -151,7 +193,11 @@ impl CompletionProvider {
         let completions = vec![
             self.snippet_completion("PATH", "Add to PATH", "PATH=\"/app/bin:$PATH\""),
             self.snippet_completion("NODE_ENV", "Node environment", "NODE_ENV=${1:production}"),
-            self.snippet_completion("PYTHONUNBUFFERED", "Python unbuffered", "PYTHONUNBUFFERED=1"),
+            self.snippet_completion(
+                "PYTHONUNBUFFERED",
+                "Python unbuffered",
+                "PYTHONUNBUFFERED=1",
+            ),
             self.snippet_completion("RUST_LOG", "Rust logging", "RUST_LOG=${1:info}"),
         ];
         serde_json::to_string(&completions).unwrap_or_else(|_| "[]".to_string())
@@ -160,18 +206,42 @@ impl CompletionProvider {
     fn get_healthcheck_completions(&self) -> String {
         let completions = vec![
             self.snippet_completion("NONE", "Disable healthcheck", "NONE"),
-            self.snippet_completion("CMD curl", "HTTP health check", "CMD curl -f http://localhost:${1:80}/ || exit 1"),
-            self.snippet_completion("CMD wget", "Wget health check", "CMD wget -q --spider http://localhost:${1:80}/ || exit 1"),
-            self.snippet_completion("--interval", "Check interval", "--interval=${1:30s} CMD ${2:command}"),
-            self.snippet_completion("--timeout", "Timeout option", "--timeout=${1:10s} CMD ${2:command}"),
-            self.snippet_completion("--retries", "Retry count", "--retries=${1:3} CMD ${2:command}"),
+            self.snippet_completion(
+                "CMD curl",
+                "HTTP health check",
+                "CMD curl -f http://localhost:${1:80}/ || exit 1",
+            ),
+            self.snippet_completion(
+                "CMD wget",
+                "Wget health check",
+                "CMD wget -q --spider http://localhost:${1:80}/ || exit 1",
+            ),
+            self.snippet_completion(
+                "--interval",
+                "Check interval",
+                "--interval=${1:30s} CMD ${2:command}",
+            ),
+            self.snippet_completion(
+                "--timeout",
+                "Timeout option",
+                "--timeout=${1:10s} CMD ${2:command}",
+            ),
+            self.snippet_completion(
+                "--retries",
+                "Retry count",
+                "--retries=${1:3} CMD ${2:command}",
+            ),
         ];
         serde_json::to_string(&completions).unwrap_or_else(|_| "[]".to_string())
     }
 
     fn get_cmd_completions(&self) -> String {
         let completions = vec![
-            self.snippet_completion("exec form", "JSON array form", "[\"${1:command}\", \"${2:arg}\"]"),
+            self.snippet_completion(
+                "exec form",
+                "JSON array form",
+                "[\"${1:command}\", \"${2:arg}\"]",
+            ),
             self.snippet_completion("shell form", "Shell form", "${1:command} ${2:args}"),
         ];
         serde_json::to_string(&completions).unwrap_or_else(|_| "[]".to_string())

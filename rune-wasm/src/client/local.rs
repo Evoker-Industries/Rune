@@ -85,7 +85,9 @@ impl LocalContainerManager {
         };
 
         let id = self.generate_id();
-        let name = config.name.unwrap_or_else(|| format!("container_{}", &id[..8]));
+        let name = config
+            .name
+            .unwrap_or_else(|| format!("container_{}", &id[..8]));
 
         let container = LocalContainer {
             id: id.clone(),
@@ -106,7 +108,8 @@ impl LocalContainerManager {
         serde_json::json!({
             "Id": id,
             "Name": name
-        }).to_string()
+        })
+        .to_string()
     }
 
     /// Start a container (simulated)
@@ -146,7 +149,9 @@ impl LocalContainerManager {
     /// List all containers
     #[wasm_bindgen(js_name = listContainers)]
     pub fn list_containers(&self, all: bool) -> String {
-        let containers: Vec<&LocalContainer> = self.containers.values()
+        let containers: Vec<&LocalContainer> = self
+            .containers
+            .values()
             .filter(|c| all || c.state == "running")
             .collect();
         serde_json::to_string(&containers).unwrap_or_else(|_| "[]".to_string())
@@ -198,7 +203,8 @@ impl LocalContainerManager {
             "containers": self.containers,
             "images": self.images,
             "idCounter": self.id_counter
-        }).to_string()
+        })
+        .to_string()
     }
 
     /// Import state from JSON (for restoration)
@@ -325,11 +331,11 @@ mod tests {
         // Test state serialization (doesn't need js-sys)
         let mut manager = LocalContainerManager::new();
         manager.id_counter = 5;
-        
+
         // Export state
         let state = manager.export_state();
         assert!(state.contains("idCounter"));
-        
+
         // Import into new manager
         let mut new_manager = LocalContainerManager::new();
         assert!(new_manager.import_state(&state));

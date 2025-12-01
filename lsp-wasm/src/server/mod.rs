@@ -42,10 +42,13 @@ impl RunefileLspServer {
     /// Open a document
     #[wasm_bindgen(js_name = openDocument)]
     pub fn open_document(&mut self, uri: &str, content: &str, version: i32) {
-        self.documents.insert(uri.to_string(), Document {
-            content: content.to_string(),
-            version,
-        });
+        self.documents.insert(
+            uri.to_string(),
+            Document {
+                content: content.to_string(),
+                version,
+            },
+        );
     }
 
     /// Update a document
@@ -93,7 +96,8 @@ impl RunefileLspServer {
     #[wasm_bindgen(js_name = getCompletions)]
     pub fn get_completions(&self, uri: &str, line: u32, character: u32) -> String {
         if let Some(doc) = self.documents.get(uri) {
-            self.completion.get_completions(&doc.content, line, character)
+            self.completion
+                .get_completions(&doc.content, line, character)
         } else {
             "[]".to_string()
         }
@@ -125,10 +129,10 @@ impl RunefileLspServer {
     #[wasm_bindgen]
     pub fn validate(&mut self, content: &str) -> String {
         self.parser.parse(content);
-        
+
         let errors = self.parser.error_count();
         let instructions = self.parser.instruction_count();
-        
+
         serde_json::json!({
             "valid": errors == 0,
             "errorCount": errors,
@@ -145,7 +149,7 @@ impl RunefileLspServer {
 
         for line in content.lines() {
             let trimmed = line.trim();
-            
+
             // Handle empty lines
             if trimmed.is_empty() {
                 if !prev_was_empty && !result.is_empty() {
@@ -203,7 +207,8 @@ impl RunefileLspServer {
                 "workspaceDiagnostics": false
             },
             "documentFormattingProvider": true
-        }).to_string()
+        })
+        .to_string()
     }
 }
 
@@ -221,7 +226,7 @@ mod tests {
     fn test_lsp_server() {
         let mut server = RunefileLspServer::new();
         server.open_document("file:///test.dockerfile", "FROM alpine\nRUN echo hello", 1);
-        
+
         let diagnostics = server.get_diagnostics("file:///test.dockerfile");
         assert!(diagnostics.contains("[]") || !diagnostics.contains("error"));
     }

@@ -1,7 +1,7 @@
 //! Hover Provider for Runefile LSP
 
-use super::syntax::{RunefileParser, InstructionKind};
-use super::server::{Hover, MarkupContent, Range, Position};
+use super::server::{Hover, MarkupContent, Position, Range};
+use super::syntax::{InstructionKind, RunefileParser};
 
 /// Hover provider for Runefile
 pub struct HoverProvider {}
@@ -29,7 +29,11 @@ impl HoverProvider {
         Some(Hover {
             contents: MarkupContent {
                 kind: "markdown".to_string(),
-                value: format!("```dockerfile\n{}\n```\n\n{}", instruction.raw.trim(), documentation),
+                value: format!(
+                    "```dockerfile\n{}\n```\n\n{}",
+                    instruction.raw.trim(),
+                    documentation
+                ),
             },
             range: Some(Range {
                 start: Position {

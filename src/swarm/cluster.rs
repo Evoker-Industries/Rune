@@ -246,7 +246,12 @@ impl SwarmCluster {
     }
 
     /// Join an existing swarm
-    pub fn join(join_token: &str, remote_addrs: Vec<String>, listen_addr: &str, advertise_addr: &str) -> Result<Self> {
+    pub fn join(
+        join_token: &str,
+        remote_addrs: Vec<String>,
+        listen_addr: &str,
+        advertise_addr: &str,
+    ) -> Result<Self> {
         // Parse token to determine role
         let role = if join_token.contains("SWMTKN-1-") {
             if join_token.contains("-manager-") {
@@ -291,16 +296,20 @@ impl SwarmCluster {
     /// Leave the swarm
     pub fn leave(&mut self, force: bool) -> Result<()> {
         // Check if this is the last manager
-        let nodes = self.nodes.read()
+        let nodes = self
+            .nodes
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
-        let manager_count = nodes.values()
+        let manager_count = nodes
+            .values()
             .filter(|n| n.role == NodeRole::Manager && n.state == NodeState::Ready)
             .count();
 
         if manager_count <= 1 && !force {
             return Err(RuneError::Swarm(
-                "Cannot leave swarm: this is the last manager. Use force to leave anyway.".to_string()
+                "Cannot leave swarm: this is the last manager. Use force to leave anyway."
+                    .to_string(),
             ));
         }
 
@@ -377,7 +386,9 @@ impl SwarmCluster {
 
     /// Add a node to the cluster
     pub fn add_node(&self, node: Node) -> Result<()> {
-        let mut nodes = self.nodes.write()
+        let mut nodes = self
+            .nodes
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
         nodes.insert(node.id.clone(), node);
@@ -386,15 +397,18 @@ impl SwarmCluster {
 
     /// Remove a node from the cluster
     pub fn remove_node(&self, node_id: &str, force: bool) -> Result<()> {
-        let mut nodes = self.nodes.write()
+        let mut nodes = self
+            .nodes
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
-        let node = nodes.get(node_id)
+        let node = nodes
+            .get(node_id)
             .ok_or_else(|| RuneError::NodeNotFound(node_id.to_string()))?;
 
         if node.state == NodeState::Ready && !force {
             return Err(RuneError::Swarm(
-                "Cannot remove active node. Drain it first or use force.".to_string()
+                "Cannot remove active node. Drain it first or use force.".to_string(),
             ));
         }
 
@@ -404,7 +418,9 @@ impl SwarmCluster {
 
     /// List all nodes
     pub fn list_nodes(&self) -> Result<Vec<Node>> {
-        let nodes = self.nodes.read()
+        let nodes = self
+            .nodes
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         Ok(nodes.values().cloned().collect())
@@ -412,20 +428,26 @@ impl SwarmCluster {
 
     /// Get a node by ID
     pub fn get_node(&self, node_id: &str) -> Result<Node> {
-        let nodes = self.nodes.read()
+        let nodes = self
+            .nodes
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
-        nodes.get(node_id)
+        nodes
+            .get(node_id)
             .cloned()
             .ok_or_else(|| RuneError::NodeNotFound(node_id.to_string()))
     }
 
     /// Update node
     pub fn update_node(&self, node_id: &str, updates: NodeUpdate) -> Result<()> {
-        let mut nodes = self.nodes.write()
+        let mut nodes = self
+            .nodes
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
-        let node = nodes.get_mut(node_id)
+        let node = nodes
+            .get_mut(node_id)
             .ok_or_else(|| RuneError::NodeNotFound(node_id.to_string()))?;
 
         if let Some(role) = updates.role {
@@ -443,7 +465,9 @@ impl SwarmCluster {
 
     /// Create a service
     pub fn create_service(&self, service: Service) -> Result<String> {
-        let mut services = self.services.write()
+        let mut services = self
+            .services
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
         let id = service.id.clone();
@@ -454,7 +478,9 @@ impl SwarmCluster {
 
     /// List services
     pub fn list_services(&self) -> Result<Vec<Service>> {
-        let services = self.services.read()
+        let services = self
+            .services
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         Ok(services.values().cloned().collect())
@@ -462,7 +488,9 @@ impl SwarmCluster {
 
     /// Get a service by ID or name
     pub fn get_service(&self, id_or_name: &str) -> Result<Service> {
-        let services = self.services.read()
+        let services = self
+            .services
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         // Try ID first
@@ -482,7 +510,9 @@ impl SwarmCluster {
 
     /// Remove a service
     pub fn remove_service(&self, id_or_name: &str) -> Result<()> {
-        let mut services = self.services.write()
+        let mut services = self
+            .services
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
         // Try ID first
@@ -491,7 +521,8 @@ impl SwarmCluster {
         }
 
         // Try name
-        let id = services.iter()
+        let id = services
+            .iter()
             .find(|(_, s)| s.spec.name == id_or_name)
             .map(|(id, _)| id.clone());
 
@@ -515,7 +546,8 @@ impl SwarmCluster {
         let nodes = self.nodes.read().unwrap();
         let services = self.services.read().unwrap();
 
-        let manager_count = nodes.values()
+        let manager_count = nodes
+            .values()
             .filter(|n| n.role == NodeRole::Manager)
             .count();
 
@@ -560,7 +592,12 @@ fn generate_token(token_type: TokenType, cluster_id: &str) -> String {
     };
 
     let random = Uuid::new_v4().to_string().replace("-", "");
-    format!("SWMTKN-1-{}-{}-{}", &cluster_id[..8], type_str, &random[..25])
+    format!(
+        "SWMTKN-1-{}-{}-{}",
+        &cluster_id[..8],
+        type_str,
+        &random[..25]
+    )
 }
 
 /// Generate an unlock key

@@ -1,7 +1,7 @@
 //! Diagnostics Provider for Runefile LSP
 
-use super::syntax::{RunefileParser, ErrorSeverity};
-use super::server::{Diagnostic, Range, Position};
+use super::server::{Diagnostic, Position, Range};
+use super::syntax::{ErrorSeverity, RunefileParser};
 
 /// Diagnostics provider for Runefile
 pub struct DiagnosticsProvider {}
@@ -14,29 +14,33 @@ impl DiagnosticsProvider {
 
     /// Get diagnostics for the parsed Runefile
     pub fn get_diagnostics(&self, parser: &RunefileParser) -> Vec<Diagnostic> {
-        parser.errors.iter().map(|error| {
-            Diagnostic {
-                range: Range {
-                    start: Position {
-                        line: error.line as u32,
-                        character: error.column as u32,
+        parser
+            .errors
+            .iter()
+            .map(|error| {
+                Diagnostic {
+                    range: Range {
+                        start: Position {
+                            line: error.line as u32,
+                            character: error.column as u32,
+                        },
+                        end: Position {
+                            line: error.line as u32,
+                            character: (error.column + 10) as u32, // Approximate end
+                        },
                     },
-                    end: Position {
-                        line: error.line as u32,
-                        character: (error.column + 10) as u32, // Approximate end
-                    },
-                },
-                severity: Some(match error.severity {
-                    ErrorSeverity::Error => 1,
-                    ErrorSeverity::Warning => 2,
-                    ErrorSeverity::Info => 3,
-                    ErrorSeverity::Hint => 4,
-                }),
-                code: None,
-                source: Some("runefile-lsp".to_string()),
-                message: error.message.clone(),
-            }
-        }).collect()
+                    severity: Some(match error.severity {
+                        ErrorSeverity::Error => 1,
+                        ErrorSeverity::Warning => 2,
+                        ErrorSeverity::Info => 3,
+                        ErrorSeverity::Hint => 4,
+                    }),
+                    code: None,
+                    source: Some("runefile-lsp".to_string()),
+                    message: error.message.clone(),
+                }
+            })
+            .collect()
     }
 }
 

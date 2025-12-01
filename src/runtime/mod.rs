@@ -4,16 +4,16 @@
 //! Provides Linux namespace isolation, cgroup resource management, and
 //! process execution for containers.
 
-pub mod namespace;
 pub mod cgroup;
+pub mod mount;
+pub mod namespace;
 pub mod process;
 pub mod syscall;
-pub mod mount;
 
-pub use namespace::{Namespace, NamespaceType};
-pub use cgroup::{CgroupManager, CgroupConfig};
-pub use process::{ContainerProcess, ProcessConfig};
+pub use cgroup::{CgroupConfig, CgroupManager};
 pub use mount::MountManager;
+pub use namespace::{Namespace, NamespaceType};
+pub use process::{ContainerProcess, ProcessConfig};
 
 use crate::error::{Result, RuneError};
 

@@ -121,7 +121,10 @@ pub enum BuildInstruction {
     /// ENV instruction - set environment variable
     Env { key: String, value: String },
     /// ARG instruction - build argument
-    Arg { name: String, default: Option<String> },
+    Arg {
+        name: String,
+        default: Option<String>,
+    },
     /// WORKDIR instruction - set working directory
     Workdir { path: String },
     /// USER instruction - set user
@@ -500,9 +503,7 @@ impl ImageBuilder {
         let paths = if args.starts_with('[') {
             serde_json::from_str(args).unwrap_or_default()
         } else {
-            args.split_whitespace()
-                .map(|s| s.to_string())
-                .collect()
+            args.split_whitespace().map(|s| s.to_string()).collect()
         };
 
         Ok(BuildInstruction::Volume { paths })
@@ -569,12 +570,11 @@ impl ImageBuilder {
     }
 
     fn parse_shell(args: &str, line_num: usize) -> Result<BuildInstruction> {
-        let shell: Vec<String> = serde_json::from_str(args).map_err(|_| {
-            RuneError::DockerfileParse {
+        let shell: Vec<String> =
+            serde_json::from_str(args).map_err(|_| RuneError::DockerfileParse {
                 line: line_num,
                 message: "SHELL requires JSON array format".to_string(),
-            }
-        })?;
+            })?;
 
         Ok(BuildInstruction::Shell { shell })
     }

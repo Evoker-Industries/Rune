@@ -17,20 +17,24 @@ pub struct BridgeNetwork {
 impl BridgeNetwork {
     /// Create a new bridge network
     pub fn new(config: NetworkConfig) -> Result<Self> {
-        let subnet = config.ipam.config.first()
+        let subnet = config
+            .ipam
+            .config
+            .first()
             .map(|c| c.subnet.as_str())
             .unwrap_or("172.17.0.0/16");
 
         let allocator = IpAllocator::new(subnet)?;
 
-        Ok(Self {
-            config,
-            allocator,
-        })
+        Ok(Self { config, allocator })
     }
 
     /// Connect a container to this network
-    pub fn connect(&mut self, container_id: &str, container_name: &str) -> Result<NetworkContainer> {
+    pub fn connect(
+        &mut self,
+        container_id: &str,
+        container_name: &str,
+    ) -> Result<NetworkContainer> {
         let ip = self.allocator.allocate()?;
         let endpoint_id = Uuid::new_v4().to_string().replace("-", "")[..12].to_string();
 
@@ -43,19 +47,21 @@ impl BridgeNetwork {
             ipv6_address: None,
         };
 
-        self.config.containers.insert(container_id.to_string(), container.clone());
+        self.config
+            .containers
+            .insert(container_id.to_string(), container.clone());
 
         Ok(container)
     }
 
     /// Disconnect a container from this network
     pub fn disconnect(&mut self, container_id: &str) -> Result<()> {
-        let container = self.config.containers.remove(container_id)
-            .ok_or_else(|| RuneError::Container(format!(
+        let container = self.config.containers.remove(container_id).ok_or_else(|| {
+            RuneError::Container(format!(
                 "Container {} not connected to network {}",
-                container_id,
-                self.config.name
-            )))?;
+                container_id, self.config.name
+            ))
+        })?;
 
         if let Some(ip_str) = container.ipv4_address {
             if let Some(ip) = ip_str.split('/').next() {
@@ -125,13 +131,20 @@ impl NetworkManager {
 
         let network = BridgeNetwork::new(config)?;
 
-        let mut networks = self.networks.write()
+        let mut networks = self
+            .networks
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
-        let mut names = self.names.write()
+        let mut names = self
+            .names
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
         if names.contains_key(&name) {
-            return Err(RuneError::Network(format!("Network {} already exists", name)));
+            return Err(RuneError::Network(format!(
+                "Network {} already exists",
+                name
+            )));
         }
 
         networks.insert(id.clone(), network);
@@ -142,9 +155,13 @@ impl NetworkManager {
 
     /// Remove a network
     pub fn remove(&self, id_or_name: &str) -> Result<()> {
-        let mut networks = self.networks.write()
+        let mut networks = self
+            .networks
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
-        let mut names = self.names.write()
+        let mut names = self
+            .names
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
         // Find network
@@ -176,9 +193,13 @@ impl NetworkManager {
 
     /// Get a network by ID or name
     pub fn get(&self, id_or_name: &str) -> Result<NetworkConfig> {
-        let networks = self.networks.read()
+        let networks = self
+            .networks
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
-        let names = self.names.read()
+        let names = self
+            .names
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         let id = if networks.contains_key(id_or_name) {
@@ -189,14 +210,17 @@ impl NetworkManager {
             return Err(RuneError::NetworkNotFound(id_or_name.to_string()));
         };
 
-        networks.get(&id)
+        networks
+            .get(&id)
             .map(|n| n.config.clone())
             .ok_or_else(|| RuneError::NetworkNotFound(id_or_name.to_string()))
     }
 
     /// List all networks
     pub fn list(&self) -> Result<Vec<NetworkConfig>> {
-        let networks = self.networks.read()
+        let networks = self
+            .networks
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         Ok(networks.values().map(|n| n.config.clone()).collect())
@@ -209,9 +233,13 @@ impl NetworkManager {
         container_id: &str,
         container_name: &str,
     ) -> Result<NetworkContainer> {
-        let mut networks = self.networks.write()
+        let mut networks = self
+            .networks
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
-        let names = self.names.read()
+        let names = self
+            .names
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         let id = if networks.contains_key(network_id_or_name) {
@@ -222,7 +250,8 @@ impl NetworkManager {
             return Err(RuneError::NetworkNotFound(network_id_or_name.to_string()));
         };
 
-        let network = networks.get_mut(&id)
+        let network = networks
+            .get_mut(&id)
             .ok_or_else(|| RuneError::NetworkNotFound(network_id_or_name.to_string()))?;
 
         network.connect(container_id, container_name)
@@ -230,9 +259,13 @@ impl NetworkManager {
 
     /// Disconnect a container from a network
     pub fn disconnect(&self, network_id_or_name: &str, container_id: &str) -> Result<()> {
-        let mut networks = self.networks.write()
+        let mut networks = self
+            .networks
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
-        let names = self.names.read()
+        let names = self
+            .names
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         let id = if networks.contains_key(network_id_or_name) {
@@ -243,7 +276,8 @@ impl NetworkManager {
             return Err(RuneError::NetworkNotFound(network_id_or_name.to_string()));
         };
 
-        let network = networks.get_mut(&id)
+        let network = networks
+            .get_mut(&id)
             .ok_or_else(|| RuneError::NetworkNotFound(network_id_or_name.to_string()))?;
 
         network.disconnect(container_id)
@@ -251,11 +285,14 @@ impl NetworkManager {
 
     /// Prune unused networks
     pub fn prune(&self) -> Result<Vec<String>> {
-        let networks = self.networks.read()
+        let networks = self
+            .networks
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         // Find networks with no containers (excluding default networks)
-        let to_remove: Vec<String> = networks.iter()
+        let to_remove: Vec<String> = networks
+            .iter()
             .filter(|(_, n)| {
                 n.config.containers.is_empty()
                     && n.config.name != "bridge"
@@ -310,7 +347,7 @@ mod tests {
     #[test]
     fn test_network_manager_default_networks() {
         let manager = NetworkManager::new().unwrap();
-        
+
         // Should have default networks
         let bridge = manager.get("bridge").unwrap();
         assert_eq!(bridge.driver, NetworkDriver::Bridge);
@@ -326,8 +363,7 @@ mod tests {
     fn test_create_network() {
         let manager = NetworkManager::new().unwrap();
 
-        let config = NetworkConfig::new("my-network")
-            .subnet("10.0.0.0/24");
+        let config = NetworkConfig::new("my-network").subnet("10.0.0.0/24");
 
         let id = manager.create(config).unwrap();
         assert!(!id.is_empty());
@@ -340,11 +376,12 @@ mod tests {
     fn test_connect_container() {
         let manager = NetworkManager::new().unwrap();
 
-        let config = NetworkConfig::new("test-network")
-            .subnet("192.168.0.0/24");
+        let config = NetworkConfig::new("test-network").subnet("192.168.0.0/24");
         manager.create(config).unwrap();
 
-        let container = manager.connect("test-network", "container1", "test-container").unwrap();
+        let container = manager
+            .connect("test-network", "container1", "test-container")
+            .unwrap();
         assert!(container.ipv4_address.is_some());
     }
 }

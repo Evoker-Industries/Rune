@@ -240,7 +240,8 @@ impl IpAllocator {
             return Err(RuneError::Network(format!("Invalid subnet: {}", subnet)));
         }
 
-        let base: Ipv4Addr = parts[0].parse()
+        let base: Ipv4Addr = parts[0]
+            .parse()
             .map_err(|_| RuneError::Network(format!("Invalid IP: {}", parts[0])))?;
 
         // Start from .2 (gateway is typically .1)
@@ -269,7 +270,8 @@ impl IpAllocator {
                 let candidate = Ipv4Addr::new(octets[0], octets[1], octets[2], octets[3]);
                 if !self.allocated.contains(&candidate) {
                     self.allocated.push(candidate);
-                    self.next = Ipv4Addr::new(octets[0], octets[1], octets[2], octets[3].wrapping_add(1));
+                    self.next =
+                        Ipv4Addr::new(octets[0], octets[1], octets[2], octets[3].wrapping_add(1));
                     return Ok(candidate);
                 }
             }

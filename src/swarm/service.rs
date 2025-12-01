@@ -75,14 +75,19 @@ impl Service {
             });
             Ok(())
         } else {
-            Err(RuneError::Service("No previous specification to rollback to".to_string()))
+            Err(RuneError::Service(
+                "No previous specification to rollback to".to_string(),
+            ))
         }
     }
 
     /// Scale the service
     pub fn scale(&mut self, replicas: u64) {
         if let Some(ref mut mode) = self.spec.mode {
-            if let ServiceMode::Replicated { replicas: ref mut r } = mode {
+            if let ServiceMode::Replicated {
+                replicas: ref mut r,
+            } = mode
+            {
                 *r = replicas;
             }
         }
@@ -92,11 +97,16 @@ impl Service {
 
     /// Get replica count
     pub fn replicas(&self) -> u64 {
-        self.spec.mode.as_ref()
+        self.spec
+            .mode
+            .as_ref()
             .map(|m| match m {
                 ServiceMode::Replicated { replicas } => *replicas,
                 ServiceMode::Global => 0,
-                ServiceMode::ReplicatedJob { max_concurrent, total_completions } => *total_completions,
+                ServiceMode::ReplicatedJob {
+                    max_concurrent,
+                    total_completions,
+                } => *total_completions,
                 ServiceMode::GlobalJob => 0,
             })
             .unwrap_or(1)
@@ -754,13 +764,25 @@ mod tests {
 
         service.update(spec2);
         assert_eq!(
-            service.spec.task_template.container_spec.as_ref().unwrap().image,
+            service
+                .spec
+                .task_template
+                .container_spec
+                .as_ref()
+                .unwrap()
+                .image,
             "nginx:2.0"
         );
 
         service.rollback().unwrap();
         assert_eq!(
-            service.spec.task_template.container_spec.as_ref().unwrap().image,
+            service
+                .spec
+                .task_template
+                .container_spec
+                .as_ref()
+                .unwrap()
+                .image,
             "nginx:1.0"
         );
     }

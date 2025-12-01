@@ -95,9 +95,7 @@ impl Node {
     /// Create a new local node
     pub fn new_local(role: NodeRole) -> Self {
         let id = Uuid::new_v4().to_string();
-        let hostname = gethostname::gethostname()
-            .to_string_lossy()
-            .to_string();
+        let hostname = gethostname::gethostname().to_string_lossy().to_string();
 
         let now = Utc::now();
 

@@ -3,8 +3,8 @@
 //! Launch the TUI directly with: rune-tui
 
 use rune::container::ContainerManager;
-use rune::tui::App;
 use rune::error::Result;
+use rune::tui::App;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;

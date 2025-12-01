@@ -3,8 +3,8 @@
 //! Provides functionality for setting up container filesystems,
 //! including pivot_root and bind mounts.
 
+use super::syscall::{chdir, chroot, mount, mount_flags, pivot_root, umount2, umount_flags};
 use crate::error::{Result, RuneError};
-use super::syscall::{mount, umount2, pivot_root, chroot, chdir, mount_flags, umount_flags};
 use std::fs;
 use std::path::Path;
 
@@ -110,7 +110,10 @@ impl MountEntry {
             source: Some("sysfs".to_string()),
             target: target.to_string(),
             fs_type: Some("sysfs".to_string()),
-            flags: mount_flags::MS_NOSUID | mount_flags::MS_NODEV | mount_flags::MS_NOEXEC | mount_flags::MS_RDONLY,
+            flags: mount_flags::MS_NOSUID
+                | mount_flags::MS_NODEV
+                | mount_flags::MS_NOEXEC
+                | mount_flags::MS_RDONLY,
             options: None,
         }
     }
@@ -173,7 +176,10 @@ impl MountManager {
     pub fn setup_rootfs(&self, rootfs: &str) -> Result<()> {
         // Make sure rootfs exists
         if !Path::new(rootfs).exists() {
-            return Err(RuneError::Runtime(format!("Root filesystem does not exist: {}", rootfs)));
+            return Err(RuneError::Runtime(format!(
+                "Root filesystem does not exist: {}",
+                rootfs
+            )));
         }
 
         // Mount rootfs as a bind mount to itself (required for pivot_root)
@@ -183,16 +189,18 @@ impl MountManager {
             None,
             mount_flags::MS_BIND | mount_flags::MS_REC,
             None,
-        ).map_err(|e| RuneError::Runtime(format!("Failed to bind mount rootfs: {}", e)))?;
+        )
+        .map_err(|e| RuneError::Runtime(format!("Failed to bind mount rootfs: {}", e)))?;
 
         // Setup default mounts
         for entry in &self.default_mounts {
             let target = format!("{}{}", rootfs, entry.target);
-            
+
             // Create mount point if it doesn't exist
             if !Path::new(&target).exists() {
-                fs::create_dir_all(&target)
-                    .map_err(|e| RuneError::Runtime(format!("Failed to create mount point {}: {}", target, e)))?;
+                fs::create_dir_all(&target).map_err(|e| {
+                    RuneError::Runtime(format!("Failed to create mount point {}: {}", target, e))
+                })?;
             }
 
             let result = mount(
@@ -217,8 +225,9 @@ impl MountManager {
         // Create put_old directory
         let put_old_path = format!("{}{}", new_root, put_old);
         if !Path::new(&put_old_path).exists() {
-            fs::create_dir_all(&put_old_path)
-                .map_err(|e| RuneError::Runtime(format!("Failed to create put_old directory: {}", e)))?;
+            fs::create_dir_all(&put_old_path).map_err(|e| {
+                RuneError::Runtime(format!("Failed to create put_old directory: {}", e))
+            })?;
         }
 
         // Perform pivot_root
@@ -226,8 +235,7 @@ impl MountManager {
             .map_err(|e| RuneError::Runtime(format!("Failed to pivot_root: {}", e)))?;
 
         // Change to new root
-        chdir("/")
-            .map_err(|e| RuneError::Runtime(format!("Failed to chdir to /: {}", e)))?;
+        chdir("/").map_err(|e| RuneError::Runtime(format!("Failed to chdir to /: {}", e)))?;
 
         // Unmount old root
         umount2(put_old, umount_flags::MNT_DETACH)
@@ -241,11 +249,9 @@ impl MountManager {
 
     /// Alternative: use chroot instead of pivot_root
     pub fn chroot_to(&self, new_root: &str) -> Result<()> {
-        chroot(new_root)
-            .map_err(|e| RuneError::Runtime(format!("Failed to chroot: {}", e)))?;
+        chroot(new_root).map_err(|e| RuneError::Runtime(format!("Failed to chroot: {}", e)))?;
 
-        chdir("/")
-            .map_err(|e| RuneError::Runtime(format!("Failed to chdir to /: {}", e)))?;
+        chdir("/").map_err(|e| RuneError::Runtime(format!("Failed to chdir to /: {}", e)))?;
 
         Ok(())
     }
@@ -259,17 +265,23 @@ impl MountManager {
 
         // Create target directory if it doesn't exist
         if !Path::new(target).exists() {
-            fs::create_dir_all(target)
-                .map_err(|e| RuneError::Runtime(format!("Failed to create mount point {}: {}", target, e)))?;
+            fs::create_dir_all(target).map_err(|e| {
+                RuneError::Runtime(format!("Failed to create mount point {}: {}", target, e))
+            })?;
         }
 
-        mount(Some(source), target, None, flags, None)
-            .map_err(|e| RuneError::Runtime(format!("Failed to mount volume {} to {}: {}", source, target, e)))?;
+        mount(Some(source), target, None, flags, None).map_err(|e| {
+            RuneError::Runtime(format!(
+                "Failed to mount volume {} to {}: {}",
+                source, target, e
+            ))
+        })?;
 
         // For read-only, need to remount with the flag
         if read_only {
-            mount(None, target, None, flags | mount_flags::MS_REMOUNT, None)
-                .map_err(|e| RuneError::Runtime(format!("Failed to make mount read-only: {}", e)))?;
+            mount(None, target, None, flags | mount_flags::MS_REMOUNT, None).map_err(|e| {
+                RuneError::Runtime(format!("Failed to make mount read-only: {}", e))
+            })?;
         }
 
         Ok(())
@@ -283,26 +295,44 @@ impl MountManager {
 
     /// Make a mount private (propagation)
     pub fn make_private(&self, target: &str) -> Result<()> {
-        mount(None, target, None, mount_flags::MS_REC | mount_flags::MS_PRIVATE, None)
-            .map_err(|e| RuneError::Runtime(format!("Failed to make mount private: {}", e)))
+        mount(
+            None,
+            target,
+            None,
+            mount_flags::MS_REC | mount_flags::MS_PRIVATE,
+            None,
+        )
+        .map_err(|e| RuneError::Runtime(format!("Failed to make mount private: {}", e)))
     }
 
     /// Make a mount shared (propagation)
     pub fn make_shared(&self, target: &str) -> Result<()> {
-        mount(None, target, None, mount_flags::MS_REC | mount_flags::MS_SHARED, None)
-            .map_err(|e| RuneError::Runtime(format!("Failed to make mount shared: {}", e)))
+        mount(
+            None,
+            target,
+            None,
+            mount_flags::MS_REC | mount_flags::MS_SHARED,
+            None,
+        )
+        .map_err(|e| RuneError::Runtime(format!("Failed to make mount shared: {}", e)))
     }
 
     /// Make a mount slave (propagation)
     pub fn make_slave(&self, target: &str) -> Result<()> {
-        mount(None, target, None, mount_flags::MS_REC | mount_flags::MS_SLAVE, None)
-            .map_err(|e| RuneError::Runtime(format!("Failed to make mount slave: {}", e)))
+        mount(
+            None,
+            target,
+            None,
+            mount_flags::MS_REC | mount_flags::MS_SLAVE,
+            None,
+        )
+        .map_err(|e| RuneError::Runtime(format!("Failed to make mount slave: {}", e)))
     }
 
     /// Create device nodes in /dev
     pub fn create_devices(&self, rootfs: &str) -> Result<()> {
         let dev_path = format!("{}/dev", rootfs);
-        
+
         // These devices are typically needed
         let devices = [
             ("null", 1, 3, 0o666),
@@ -315,7 +345,7 @@ impl MountManager {
 
         for (name, major, minor, mode) in devices {
             let path = format!("{}/{}", dev_path, name);
-            
+
             // Skip if already exists
             if Path::new(&path).exists() {
                 continue;
@@ -328,7 +358,9 @@ impl MountManager {
                 // Create an empty file to bind mount to
                 match fs::File::create(&path) {
                     Ok(_) => {
-                        if let Err(e) = mount(Some(&host_path), &path, None, mount_flags::MS_BIND, None) {
+                        if let Err(e) =
+                            mount(Some(&host_path), &path, None, mount_flags::MS_BIND, None)
+                        {
                             tracing::warn!("Failed to bind mount device {}: {}", name, e);
                         }
                     }
@@ -403,10 +435,10 @@ mod tests {
     fn test_mount_manager_default_mounts() {
         let manager = MountManager::new();
         let mounts = manager.default_mounts();
-        
+
         // Should have several default mounts
         assert!(!mounts.is_empty());
-        
+
         // Check for essential mounts
         assert!(mounts.iter().any(|m| m.target == "/proc"));
         assert!(mounts.iter().any(|m| m.target == "/sys"));

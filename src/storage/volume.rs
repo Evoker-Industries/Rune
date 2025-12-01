@@ -158,8 +158,16 @@ impl VolumeManager {
     }
 
     /// Create a new volume
-    pub fn create(&self, name: &str, driver: Option<VolumeDriver>, options: HashMap<String, String>, labels: HashMap<String, String>) -> Result<Volume> {
-        let mut volumes = self.volumes.write()
+    pub fn create(
+        &self,
+        name: &str,
+        driver: Option<VolumeDriver>,
+        options: HashMap<String, String>,
+        labels: HashMap<String, String>,
+    ) -> Result<Volume> {
+        let mut volumes = self
+            .volumes
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
         if volumes.contains_key(name) {
@@ -174,7 +182,7 @@ impl VolumeManager {
         };
 
         let mut volume = Volume::new(&volume_name, &self.base_path);
-        
+
         if let Some(d) = driver {
             volume.driver = d;
         }
@@ -191,17 +199,22 @@ impl VolumeManager {
 
     /// Get a volume by name
     pub fn get(&self, name: &str) -> Result<Volume> {
-        let volumes = self.volumes.read()
+        let volumes = self
+            .volumes
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
-        volumes.get(name)
+        volumes
+            .get(name)
             .cloned()
             .ok_or_else(|| RuneError::VolumeNotFound(name.to_string()))
     }
 
     /// List all volumes
     pub fn list(&self) -> Result<Vec<Volume>> {
-        let volumes = self.volumes.read()
+        let volumes = self
+            .volumes
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         Ok(volumes.values().cloned().collect())
@@ -209,10 +222,13 @@ impl VolumeManager {
 
     /// Remove a volume
     pub fn remove(&self, name: &str, force: bool) -> Result<()> {
-        let mut volumes = self.volumes.write()
+        let mut volumes = self
+            .volumes
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
-        let volume = volumes.get(name)
+        let volume = volumes
+            .get(name)
             .ok_or_else(|| RuneError::VolumeNotFound(name.to_string()))?;
 
         // Check if volume is in use
@@ -237,13 +253,17 @@ impl VolumeManager {
 
     /// Prune unused volumes
     pub fn prune(&self) -> Result<Vec<String>> {
-        let volumes = self.volumes.read()
+        let volumes = self
+            .volumes
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         // Find unused volumes
-        let to_remove: Vec<String> = volumes.iter()
+        let to_remove: Vec<String> = volumes
+            .iter()
             .filter(|(_, v)| {
-                v.usage_data.as_ref()
+                v.usage_data
+                    .as_ref()
                     .map(|u| u.ref_count == 0)
                     .unwrap_or(true)
             })
@@ -262,10 +282,13 @@ impl VolumeManager {
 
     /// Increment reference count for a volume
     pub fn add_reference(&self, name: &str) -> Result<()> {
-        let mut volumes = self.volumes.write()
+        let mut volumes = self
+            .volumes
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
-        let volume = volumes.get_mut(name)
+        let volume = volumes
+            .get_mut(name)
             .ok_or_else(|| RuneError::VolumeNotFound(name.to_string()))?;
 
         match &mut volume.usage_data {
@@ -283,10 +306,13 @@ impl VolumeManager {
 
     /// Decrement reference count for a volume
     pub fn remove_reference(&self, name: &str) -> Result<()> {
-        let mut volumes = self.volumes.write()
+        let mut volumes = self
+            .volumes
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
-        let volume = volumes.get_mut(name)
+        let volume = volumes
+            .get_mut(name)
             .ok_or_else(|| RuneError::VolumeNotFound(name.to_string()))?;
 
         if let Some(ref mut usage) = volume.usage_data {
@@ -307,7 +333,9 @@ mod tests {
         let temp = tempdir().unwrap();
         let manager = VolumeManager::new(temp.path().to_path_buf()).unwrap();
 
-        let volume = manager.create("test-volume", None, HashMap::new(), HashMap::new()).unwrap();
+        let volume = manager
+            .create("test-volume", None, HashMap::new(), HashMap::new())
+            .unwrap();
         assert_eq!(volume.name, "test-volume");
         assert!(volume.mountpoint.exists());
     }
@@ -317,7 +345,9 @@ mod tests {
         let temp = tempdir().unwrap();
         let manager = VolumeManager::new(temp.path().to_path_buf()).unwrap();
 
-        manager.create("test-volume", None, HashMap::new(), HashMap::new()).unwrap();
+        manager
+            .create("test-volume", None, HashMap::new(), HashMap::new())
+            .unwrap();
         manager.remove("test-volume", false).unwrap();
 
         assert!(manager.get("test-volume").is_err());
@@ -328,8 +358,10 @@ mod tests {
         let temp = tempdir().unwrap();
         let manager = VolumeManager::new(temp.path().to_path_buf()).unwrap();
 
-        manager.create("test-volume", None, HashMap::new(), HashMap::new()).unwrap();
-        
+        manager
+            .create("test-volume", None, HashMap::new(), HashMap::new())
+            .unwrap();
+
         manager.add_reference("test-volume").unwrap();
         manager.add_reference("test-volume").unwrap();
 

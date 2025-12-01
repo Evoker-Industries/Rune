@@ -3,12 +3,12 @@
 //! This is the main CLI entry point for Rune.
 
 use clap::{Parser, Subcommand};
+use rune::compose::{ComposeOrchestrator, ComposeParser};
 use rune::container::{ContainerConfig, ContainerManager};
-use rune::compose::{ComposeParser, ComposeOrchestrator};
+use rune::error::Result;
 use rune::image::builder::{BuildContext, ImageBuilder, DEFAULT_BUILD_FILE};
 use rune::swarm::{SwarmCluster, SwarmConfig};
 use rune::tui::App;
-use rune::error::Result;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
@@ -638,9 +638,7 @@ async fn main() -> Result<()> {
         EnvFilter::new("info")
     };
 
-    tracing_subscriber::fmt()
-        .with_env_filter(filter)
-        .init();
+    tracing_subscriber::fmt().with_env_filter(filter).init();
 
     // Get base path for rune data
     let base_path = dirs::data_dir()
@@ -750,7 +748,11 @@ async fn main() -> Result<()> {
             }
         }
 
-        Commands::Logs { container, follow, tail } => {
+        Commands::Logs {
+            container,
+            follow,
+            tail,
+        } => {
             println!("Fetching logs for container {}...", container);
             // In a real implementation, we would stream container logs
         }
@@ -830,62 +832,57 @@ async fn main() -> Result<()> {
             }
         }
 
-        Commands::Network { command } => {
-            match command {
-                NetworkCommands::List => {
-                    println!("NETWORK ID     NAME      DRIVER    SCOPE");
-                    println!("abc123def456   bridge    bridge    local");
-                    println!("def456ghi789   host      host      local");
-                    println!("ghi789jkl012   none      null      local");
-                }
-                NetworkCommands::Create {
-                    name,
-                    driver,
-                    subnet,
-                    gateway,
-                } => {
-                    println!("Created network {}", name);
-                }
-                NetworkCommands::Remove { network } => {
-                    println!("Removed network {}", network);
-                }
-                NetworkCommands::Inspect { network } => {
-                    println!("Inspecting network {}...", network);
-                }
-                NetworkCommands::Connect { network, container } => {
-                    println!("Connected {} to {}", container, network);
-                }
-                NetworkCommands::Disconnect { network, container } => {
-                    println!("Disconnected {} from {}", container, network);
-                }
-                NetworkCommands::Prune { force } => {
-                    println!("Pruning unused networks...");
-                }
+        Commands::Network { command } => match command {
+            NetworkCommands::List => {
+                println!("NETWORK ID     NAME      DRIVER    SCOPE");
+                println!("abc123def456   bridge    bridge    local");
+                println!("def456ghi789   host      host      local");
+                println!("ghi789jkl012   none      null      local");
             }
-        }
+            NetworkCommands::Create {
+                name,
+                driver,
+                subnet,
+                gateway,
+            } => {
+                println!("Created network {}", name);
+            }
+            NetworkCommands::Remove { network } => {
+                println!("Removed network {}", network);
+            }
+            NetworkCommands::Inspect { network } => {
+                println!("Inspecting network {}...", network);
+            }
+            NetworkCommands::Connect { network, container } => {
+                println!("Connected {} to {}", container, network);
+            }
+            NetworkCommands::Disconnect { network, container } => {
+                println!("Disconnected {} from {}", container, network);
+            }
+            NetworkCommands::Prune { force } => {
+                println!("Pruning unused networks...");
+            }
+        },
 
-        Commands::Volume { command } => {
-            match command {
-                VolumeCommands::List => {
-                    println!("DRIVER    VOLUME NAME");
-                }
-                VolumeCommands::Create { name, driver } => {
-                    let vol_name = name.unwrap_or_else(|| {
-                        uuid::Uuid::new_v4().to_string()[..12].to_string()
-                    });
-                    println!("{}", vol_name);
-                }
-                VolumeCommands::Remove { volume, force } => {
-                    println!("Removed volume {}", volume);
-                }
-                VolumeCommands::Inspect { volume } => {
-                    println!("Inspecting volume {}...", volume);
-                }
-                VolumeCommands::Prune { force } => {
-                    println!("Pruning unused volumes...");
-                }
+        Commands::Volume { command } => match command {
+            VolumeCommands::List => {
+                println!("DRIVER    VOLUME NAME");
             }
-        }
+            VolumeCommands::Create { name, driver } => {
+                let vol_name =
+                    name.unwrap_or_else(|| uuid::Uuid::new_v4().to_string()[..12].to_string());
+                println!("{}", vol_name);
+            }
+            VolumeCommands::Remove { volume, force } => {
+                println!("Removed volume {}", volume);
+            }
+            VolumeCommands::Inspect { volume } => {
+                println!("Inspecting volume {}...", volume);
+            }
+            VolumeCommands::Prune { force } => {
+                println!("Pruning unused volumes...");
+            }
+        },
 
         Commands::Compose { command } => {
             let working_dir = std::env::current_dir()?;
@@ -903,11 +900,13 @@ async fn main() -> Result<()> {
                     });
 
                     let config = ComposeParser::parse_file(&compose_file)?;
-                    let project_name = config.name.clone()
-                        .unwrap_or_else(|| working_dir.file_name()
+                    let project_name = config.name.clone().unwrap_or_else(|| {
+                        working_dir
+                            .file_name()
                             .and_then(|s| s.to_str())
                             .unwrap_or("default")
-                            .to_string());
+                            .to_string()
+                    });
 
                     let mut orchestrator = ComposeOrchestrator::new(
                         &project_name,
@@ -966,141 +965,150 @@ async fn main() -> Result<()> {
             }
         }
 
-        Commands::Swarm { command } => {
-            match command {
-                SwarmCommands::Init {
-                    listen_addr,
-                    advertise_addr,
-                    force_new_cluster,
-                } => {
-                    let mut config = SwarmConfig::default();
-                    config.listen_addr = listen_addr;
-                    if let Some(addr) = advertise_addr {
-                        config.advertise_addr = addr;
-                    }
-                    config.force_new_cluster = force_new_cluster;
+        Commands::Swarm { command } => match command {
+            SwarmCommands::Init {
+                listen_addr,
+                advertise_addr,
+                force_new_cluster,
+            } => {
+                let mut config = SwarmConfig::default();
+                config.listen_addr = listen_addr;
+                if let Some(addr) = advertise_addr {
+                    config.advertise_addr = addr;
+                }
+                config.force_new_cluster = force_new_cluster;
 
-                    let cluster = SwarmCluster::init(config)?;
-                    println!("Swarm initialized: current node ({}) is now a manager.", cluster.id());
-                    println!("\nTo add a worker to this swarm, run:");
-                    println!("    rune swarm join --token {} <manager-ip>:2377", cluster.join_token(rune::swarm::cluster::TokenType::Worker));
-                    println!("\nTo add a manager to this swarm, run:");
-                    println!("    rune swarm join --token {} <manager-ip>:2377", cluster.join_token(rune::swarm::cluster::TokenType::Manager));
-                }
-                SwarmCommands::Join { token, remote } => {
-                    println!("Joining swarm at {}...", remote);
-                }
-                SwarmCommands::Leave { force } => {
-                    println!("Leaving swarm...");
-                }
-                SwarmCommands::JoinToken { role, rotate } => {
-                    println!("Join token for {}: SWMTKN-...", role);
-                }
-                SwarmCommands::Update {
-                    autolock,
-                    task_history_limit,
-                } => {
-                    println!("Swarm updated");
-                }
-                SwarmCommands::Unlock => {
-                    println!("Please enter unlock key:");
-                }
-                SwarmCommands::UnlockKey { rotate } => {
-                    println!("Unlock key: SWMKEY-...");
+                let cluster = SwarmCluster::init(config)?;
+                println!(
+                    "Swarm initialized: current node ({}) is now a manager.",
+                    cluster.id()
+                );
+                println!("\nTo add a worker to this swarm, run:");
+                println!(
+                    "    rune swarm join --token {} <manager-ip>:2377",
+                    cluster.join_token(rune::swarm::cluster::TokenType::Worker)
+                );
+                println!("\nTo add a manager to this swarm, run:");
+                println!(
+                    "    rune swarm join --token {} <manager-ip>:2377",
+                    cluster.join_token(rune::swarm::cluster::TokenType::Manager)
+                );
+            }
+            SwarmCommands::Join { token, remote } => {
+                println!("Joining swarm at {}...", remote);
+            }
+            SwarmCommands::Leave { force } => {
+                println!("Leaving swarm...");
+            }
+            SwarmCommands::JoinToken { role, rotate } => {
+                println!("Join token for {}: SWMTKN-...", role);
+            }
+            SwarmCommands::Update {
+                autolock,
+                task_history_limit,
+            } => {
+                println!("Swarm updated");
+            }
+            SwarmCommands::Unlock => {
+                println!("Please enter unlock key:");
+            }
+            SwarmCommands::UnlockKey { rotate } => {
+                println!("Unlock key: SWMKEY-...");
+            }
+        },
+
+        Commands::Service { command } => match command {
+            ServiceCommands::List => {
+                println!("ID             NAME       MODE         REPLICAS   IMAGE");
+            }
+            ServiceCommands::Create {
+                name,
+                image,
+                replicas,
+                publish,
+                env,
+                mount,
+            } => {
+                println!("Created service {}", name);
+            }
+            ServiceCommands::Update {
+                service,
+                image,
+                replicas,
+                force,
+            } => {
+                println!("Updated service {}", service);
+            }
+            ServiceCommands::Scale { scales } => {
+                for scale in scales {
+                    if let Some((name, replicas)) = scale.split_once('=') {
+                        println!("Scaled {} to {} replicas", name, replicas);
+                    }
                 }
             }
-        }
+            ServiceCommands::Rollback { service } => {
+                println!("Rolling back service {}", service);
+            }
+            ServiceCommands::Remove { service } => {
+                println!("Removed service {}", service);
+            }
+            ServiceCommands::Inspect { service } => {
+                println!("Inspecting service {}...", service);
+            }
+            ServiceCommands::Logs { service, follow } => {
+                println!("Fetching logs for service {}...", service);
+            }
+            ServiceCommands::Ps { service } => {
+                println!("ID             NAME              IMAGE     NODE      DESIRED STATE   CURRENT STATE");
+            }
+        },
 
-        Commands::Service { command } => {
-            match command {
-                ServiceCommands::List => {
-                    println!("ID             NAME       MODE         REPLICAS   IMAGE");
-                }
-                ServiceCommands::Create {
-                    name,
-                    image,
-                    replicas,
-                    publish,
-                    env,
-                    mount,
-                } => {
-                    println!("Created service {}", name);
-                }
-                ServiceCommands::Update {
-                    service,
-                    image,
-                    replicas,
-                    force,
-                } => {
-                    println!("Updated service {}", service);
-                }
-                ServiceCommands::Scale { scales } => {
-                    for scale in scales {
-                        if let Some((name, replicas)) = scale.split_once('=') {
-                            println!("Scaled {} to {} replicas", name, replicas);
-                        }
-                    }
-                }
-                ServiceCommands::Rollback { service } => {
-                    println!("Rolling back service {}", service);
-                }
-                ServiceCommands::Remove { service } => {
-                    println!("Removed service {}", service);
-                }
-                ServiceCommands::Inspect { service } => {
-                    println!("Inspecting service {}...", service);
-                }
-                ServiceCommands::Logs { service, follow } => {
-                    println!("Fetching logs for service {}...", service);
-                }
-                ServiceCommands::Ps { service } => {
-                    println!("ID             NAME              IMAGE     NODE      DESIRED STATE   CURRENT STATE");
+        Commands::Node { command } => match command {
+            NodeCommands::List => {
+                println!("ID                           HOSTNAME         STATUS    AVAILABILITY   MANAGER STATUS");
+            }
+            NodeCommands::Inspect { node } => {
+                println!("Inspecting node {}...", node);
+            }
+            NodeCommands::Update {
+                node,
+                availability,
+                role,
+                label_add,
+                label_rm,
+            } => {
+                println!("Updated node {}", node);
+            }
+            NodeCommands::Promote { nodes } => {
+                for node in nodes {
+                    println!("Node {} promoted to manager", node);
                 }
             }
-        }
-
-        Commands::Node { command } => {
-            match command {
-                NodeCommands::List => {
-                    println!("ID                           HOSTNAME         STATUS    AVAILABILITY   MANAGER STATUS");
-                }
-                NodeCommands::Inspect { node } => {
-                    println!("Inspecting node {}...", node);
-                }
-                NodeCommands::Update {
-                    node,
-                    availability,
-                    role,
-                    label_add,
-                    label_rm,
-                } => {
-                    println!("Updated node {}", node);
-                }
-                NodeCommands::Promote { nodes } => {
-                    for node in nodes {
-                        println!("Node {} promoted to manager", node);
-                    }
-                }
-                NodeCommands::Demote { nodes } => {
-                    for node in nodes {
-                        println!("Node {} demoted to worker", node);
-                    }
-                }
-                NodeCommands::Remove { node, force } => {
-                    println!("Removed node {}", node);
-                }
-                NodeCommands::Ps { node } => {
-                    println!("ID             NAME              IMAGE     DESIRED STATE   CURRENT STATE");
+            NodeCommands::Demote { nodes } => {
+                for node in nodes {
+                    println!("Node {} demoted to worker", node);
                 }
             }
-        }
+            NodeCommands::Remove { node, force } => {
+                println!("Removed node {}", node);
+            }
+            NodeCommands::Ps { node } => {
+                println!(
+                    "ID             NAME              IMAGE     DESIRED STATE   CURRENT STATE"
+                );
+            }
+        },
 
         Commands::Info => {
             println!("Client:");
             println!(" Version:    {}", env!("CARGO_PKG_VERSION"));
             println!(" API version: 1.43");
             println!(" Go version:  N/A (Rust)");
-            println!(" OS/Arch:     {}/{}", std::env::consts::OS, std::env::consts::ARCH);
+            println!(
+                " OS/Arch:     {}/{}",
+                std::env::consts::OS,
+                std::env::consts::ARCH
+            );
             println!();
             println!("Server:");
             println!(" Containers: {}", container_manager.count()?);
@@ -1116,7 +1124,11 @@ async fn main() -> Result<()> {
             println!("Rune version {}", env!("CARGO_PKG_VERSION"));
             println!("API version: 1.43");
             println!("Built with:  Rust {}", env!("CARGO_PKG_RUST_VERSION"));
-            println!("OS/Arch:     {}/{}", std::env::consts::OS, std::env::consts::ARCH);
+            println!(
+                "OS/Arch:     {}/{}",
+                std::env::consts::OS,
+                std::env::consts::ARCH
+            );
         }
 
         Commands::Tui => {

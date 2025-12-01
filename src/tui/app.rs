@@ -12,7 +12,9 @@ use crossterm::{
 };
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Tabs, Row, Table, TableState, Clear},
+    widgets::{
+        Block, Borders, Clear, List, ListItem, ListState, Paragraph, Row, Table, TableState, Tabs,
+    },
 };
 use std::io;
 use std::sync::Arc;
@@ -213,7 +215,8 @@ impl App {
                 if let Some(container) = self.containers.get(i) {
                     match self.container_manager.start(&container.id) {
                         Ok(_) => {
-                            self.status_message = Some(format!("Started container {}", container.name));
+                            self.status_message =
+                                Some(format!("Started container {}", container.name));
                         }
                         Err(e) => {
                             self.status_message = Some(format!("Error: {}", e));
@@ -232,7 +235,8 @@ impl App {
                 if let Some(container) = self.containers.get(i) {
                     match self.container_manager.stop(&container.id) {
                         Ok(_) => {
-                            self.status_message = Some(format!("Stopped container {}", container.name));
+                            self.status_message =
+                                Some(format!("Stopped container {}", container.name));
                         }
                         Err(e) => {
                             self.status_message = Some(format!("Error: {}", e));
@@ -252,7 +256,8 @@ impl App {
                     let _ = self.container_manager.stop(&container.id);
                     match self.container_manager.start(&container.id) {
                         Ok(_) => {
-                            self.status_message = Some(format!("Restarted container {}", container.name));
+                            self.status_message =
+                                Some(format!("Restarted container {}", container.name));
                         }
                         Err(e) => {
                             self.status_message = Some(format!("Error: {}", e));
@@ -271,7 +276,8 @@ impl App {
                 if let Some(container) = self.containers.get(i) {
                     match self.container_manager.remove(&container.id, true) {
                         Ok(_) => {
-                            self.status_message = Some(format!("Removed container {}", container.name));
+                            self.status_message =
+                                Some(format!("Removed container {}", container.name));
                         }
                         Err(e) => {
                             self.status_message = Some(format!("Error: {}", e));
@@ -290,7 +296,8 @@ impl App {
                 if let Some(container) = self.containers.get(i) {
                     match self.container_manager.pause(&container.id) {
                         Ok(_) => {
-                            self.status_message = Some(format!("Paused container {}", container.name));
+                            self.status_message =
+                                Some(format!("Paused container {}", container.name));
                         }
                         Err(e) => {
                             self.status_message = Some(format!("Error: {}", e));
@@ -309,7 +316,8 @@ impl App {
                 if let Some(container) = self.containers.get(i) {
                     match self.container_manager.unpause(&container.id) {
                         Ok(_) => {
-                            self.status_message = Some(format!("Unpaused container {}", container.name));
+                            self.status_message =
+                                Some(format!("Unpaused container {}", container.name));
                         }
                         Err(e) => {
                             self.status_message = Some(format!("Error: {}", e));
@@ -326,10 +334,10 @@ impl App {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3),  // Header
-                Constraint::Length(3),  // Tabs
-                Constraint::Min(0),     // Content
-                Constraint::Length(3),  // Status bar
+                Constraint::Length(3), // Header
+                Constraint::Length(3), // Tabs
+                Constraint::Min(0),    // Content
+                Constraint::Length(3), // Status bar
             ])
             .split(f.area());
 
@@ -360,13 +368,20 @@ impl App {
 
     /// Render header
     fn render_header(&self, f: &mut Frame, area: Rect) {
-        let title = Paragraph::new(vec![
-            Line::from(vec![
-                Span::styled("🔮 Rune", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-                Span::raw(" - Docker-compatible Container Service"),
-            ]),
-        ])
-        .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::Blue)));
+        let title = Paragraph::new(vec![Line::from(vec![
+            Span::styled(
+                "🔮 Rune",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::raw(" - Docker-compatible Container Service"),
+        ])])
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Blue)),
+        );
         f.render_widget(title, area);
     }
 
@@ -377,34 +392,46 @@ impl App {
             .block(Block::default().borders(Borders::ALL).title("Navigation"))
             .select(self.current_tab)
             .style(Style::default().fg(Color::White))
-            .highlight_style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD));
+            .highlight_style(
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            );
         f.render_widget(tabs, area);
     }
 
     /// Render containers tab
     fn render_containers(&mut self, f: &mut Frame, area: Rect) {
         let header = Row::new(vec!["ID", "Name", "Image", "Status", "Created"])
-            .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+            .style(
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            )
             .bottom_margin(1);
 
-        let rows: Vec<Row> = self.containers.iter().map(|c| {
-            let status_color = match c.status {
-                ContainerStatus::Running => Color::Green,
-                ContainerStatus::Paused => Color::Yellow,
-                ContainerStatus::Stopped | ContainerStatus::Exited => Color::Red,
-                _ => Color::Gray,
-            };
+        let rows: Vec<Row> = self
+            .containers
+            .iter()
+            .map(|c| {
+                let status_color = match c.status {
+                    ContainerStatus::Running => Color::Green,
+                    ContainerStatus::Paused => Color::Yellow,
+                    ContainerStatus::Stopped | ContainerStatus::Exited => Color::Red,
+                    _ => Color::Gray,
+                };
 
-            Row::new(vec![
-                c.id[..12].to_string(),
-                c.name.clone(),
-                c.image.clone(),
-                format!("{}", c.status),
-                c.created_at.format("%Y-%m-%d %H:%M").to_string(),
-            ])
-            .style(Style::default().fg(Color::White))
-            .height(1)
-        }).collect();
+                Row::new(vec![
+                    c.id[..12].to_string(),
+                    c.name.clone(),
+                    c.image.clone(),
+                    format!("{}", c.status),
+                    c.created_at.format("%Y-%m-%d %H:%M").to_string(),
+                ])
+                .style(Style::default().fg(Color::White))
+                .height(1)
+            })
+            .collect();
 
         let widths = [
             Constraint::Length(14),
@@ -425,9 +452,7 @@ impl App {
 
     /// Render images tab
     fn render_images(&mut self, f: &mut Frame, area: Rect) {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title("Images");
+        let block = Block::default().borders(Borders::ALL).title("Images");
 
         let text = Paragraph::new("No images found. Pull or build images to see them here.")
             .block(block)
@@ -438,9 +463,7 @@ impl App {
 
     /// Render networks tab
     fn render_networks(&mut self, f: &mut Frame, area: Rect) {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title("Networks");
+        let block = Block::default().borders(Borders::ALL).title("Networks");
 
         let text = Paragraph::new("Default networks:\n  • bridge\n  • host\n  • none")
             .block(block)
@@ -451,9 +474,7 @@ impl App {
 
     /// Render volumes tab
     fn render_volumes(&mut self, f: &mut Frame, area: Rect) {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title("Volumes");
+        let block = Block::default().borders(Borders::ALL).title("Volumes");
 
         let text = Paragraph::new("No volumes found. Create volumes to see them here.")
             .block(block)
@@ -464,13 +485,12 @@ impl App {
 
     /// Render swarm tab
     fn render_swarm(&mut self, f: &mut Frame, area: Rect) {
-        let block = Block::default()
-            .borders(Borders::ALL)
-            .title("Swarm");
+        let block = Block::default().borders(Borders::ALL).title("Swarm");
 
-        let text = Paragraph::new("Swarm mode is not active.\n\nInitialize swarm with: rune swarm init")
-            .block(block)
-            .style(Style::default().fg(Color::Gray));
+        let text =
+            Paragraph::new("Swarm mode is not active.\n\nInitialize swarm with: rune swarm init")
+                .block(block)
+                .style(Style::default().fg(Color::Gray));
 
         f.render_widget(text, area);
     }
@@ -487,7 +507,11 @@ impl App {
         };
 
         let status_bar = Paragraph::new(status)
-            .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(Color::Blue)))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::Blue)),
+            )
             .style(Style::default().fg(Color::Cyan));
 
         f.render_widget(status_bar, area);
@@ -500,7 +524,12 @@ impl App {
         f.render_widget(Clear, area);
 
         let help_text = vec![
-            Line::from(Span::styled("Keyboard Shortcuts", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))),
+            Line::from(Span::styled(
+                "Keyboard Shortcuts",
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD),
+            )),
             Line::from(""),
             Line::from(vec![
                 Span::styled("Tab / ← →", Style::default().fg(Color::Cyan)),
@@ -547,14 +576,19 @@ impl App {
                 Span::raw("          Quit"),
             ]),
             Line::from(""),
-            Line::from(Span::styled("Press any key to close", Style::default().fg(Color::Gray))),
+            Line::from(Span::styled(
+                "Press any key to close",
+                Style::default().fg(Color::Gray),
+            )),
         ];
 
         let help = Paragraph::new(help_text)
-            .block(Block::default()
-                .borders(Borders::ALL)
-                .title("Help")
-                .border_style(Style::default().fg(Color::Yellow)))
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Help")
+                    .border_style(Style::default().fg(Color::Yellow)),
+            )
             .alignment(Alignment::Left);
 
         f.render_widget(help, area);

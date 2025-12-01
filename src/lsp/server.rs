@@ -1,12 +1,12 @@
 //! Runefile LSP Server Implementation
 
+use super::completion::CompletionProvider;
+use super::diagnostics::DiagnosticsProvider;
+use super::hover::HoverProvider;
+use super::syntax::{ErrorSeverity, InstructionKind, RunefileParser};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use serde::{Deserialize, Serialize};
-use super::syntax::{RunefileParser, InstructionKind, ErrorSeverity};
-use super::completion::CompletionProvider;
-use super::hover::HoverProvider;
-use super::diagnostics::DiagnosticsProvider;
 
 /// LSP message types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -14,37 +14,37 @@ use super::diagnostics::DiagnosticsProvider;
 pub enum LspMessage {
     #[serde(rename = "initialize")]
     Initialize { id: i64, params: InitializeParams },
-    
+
     #[serde(rename = "initialized")]
     Initialized,
-    
+
     #[serde(rename = "shutdown")]
     Shutdown { id: i64 },
-    
+
     #[serde(rename = "exit")]
     Exit,
-    
+
     #[serde(rename = "textDocument/didOpen")]
     DidOpen { params: DidOpenParams },
-    
+
     #[serde(rename = "textDocument/didChange")]
     DidChange { params: DidChangeParams },
-    
+
     #[serde(rename = "textDocument/didClose")]
     DidClose { params: DidCloseParams },
-    
+
     #[serde(rename = "textDocument/didSave")]
     DidSave { params: DidSaveParams },
-    
+
     #[serde(rename = "textDocument/completion")]
     Completion { id: i64, params: CompletionParams },
-    
+
     #[serde(rename = "textDocument/hover")]
     Hover { id: i64, params: HoverParams },
-    
+
     #[serde(rename = "textDocument/definition")]
     Definition { id: i64, params: DefinitionParams },
-    
+
     #[serde(rename = "textDocument/formatting")]
     Formatting { id: i64, params: FormattingParams },
 }
@@ -359,11 +359,14 @@ impl RunefileLanguageServer {
         let diagnostics = self.diagnostics_provider.get_diagnostics(&parser);
 
         let mut docs = self.documents.write().unwrap();
-        docs.insert(params.text_document.uri.clone(), DocumentState {
-            content: params.text_document.text.clone(),
-            version: params.text_document.version,
-            parser,
-        });
+        docs.insert(
+            params.text_document.uri.clone(),
+            DocumentState {
+                content: params.text_document.text.clone(),
+                version: params.text_document.version,
+                parser,
+            },
+        );
 
         diagnostics
     }
@@ -377,11 +380,14 @@ impl RunefileLanguageServer {
             let diagnostics = self.diagnostics_provider.get_diagnostics(&parser);
 
             let mut docs = self.documents.write().unwrap();
-            docs.insert(params.text_document.uri.clone(), DocumentState {
-                content: change.text.clone(),
-                version: params.text_document.version,
-                parser,
-            });
+            docs.insert(
+                params.text_document.uri.clone(),
+                DocumentState {
+                    content: change.text.clone(),
+                    version: params.text_document.version,
+                    parser,
+                },
+            );
 
             return diagnostics;
         }
@@ -398,7 +404,7 @@ impl RunefileLanguageServer {
     /// Handle completion request
     pub fn completion(&self, params: &CompletionParams) -> Vec<CompletionItem> {
         let docs = self.documents.read().unwrap();
-        
+
         if let Some(doc) = docs.get(&params.text_document.uri) {
             return self.completion_provider.get_completions(
                 &doc.content,
@@ -415,7 +421,7 @@ impl RunefileLanguageServer {
     /// Handle hover request
     pub fn hover(&self, params: &HoverParams) -> Option<Hover> {
         let docs = self.documents.read().unwrap();
-        
+
         if let Some(doc) = docs.get(&params.text_document.uri) {
             return self.hover_provider.get_hover(
                 &doc.content,
@@ -431,7 +437,7 @@ impl RunefileLanguageServer {
     /// Handle definition request
     pub fn definition(&self, params: &DefinitionParams) -> Option<Location> {
         let docs = self.documents.read().unwrap();
-        
+
         if let Some(doc) = docs.get(&params.text_document.uri) {
             // Find definitions for COPY --from=stage or variable references
             let line = params.position.line as usize;
@@ -451,13 +457,20 @@ impl RunefileLanguageServer {
                         // Find the FROM instruction that defines this stage
                         for i in &doc.parser.instructions {
                             if i.kind == InstructionKind::From {
-                                if i.arguments.contains(&format!("AS {}", stage_name)) ||
-                                   i.arguments.contains(&format!("as {}", stage_name)) {
+                                if i.arguments.contains(&format!("AS {}", stage_name))
+                                    || i.arguments.contains(&format!("as {}", stage_name))
+                                {
                                     return Some(Location {
                                         uri: params.text_document.uri.clone(),
                                         range: Range {
-                                            start: Position { line: i.line as u32, character: 0 },
-                                            end: Position { line: i.line as u32, character: i.raw.len() as u32 },
+                                            start: Position {
+                                                line: i.line as u32,
+                                                character: 0,
+                                            },
+                                            end: Position {
+                                                line: i.line as u32,
+                                                character: i.raw.len() as u32,
+                                            },
                                         },
                                     });
                                 }
@@ -474,7 +487,7 @@ impl RunefileLanguageServer {
     /// Handle formatting request
     pub fn formatting(&self, params: &FormattingParams) -> Vec<TextEdit> {
         let docs = self.documents.read().unwrap();
-        
+
         if let Some(doc) = docs.get(&params.text_document.uri) {
             return self.format_document(&doc.content, &params.options);
         }
@@ -489,14 +502,14 @@ impl RunefileLanguageServer {
 
         for (i, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
-            
+
             // Format instruction lines
             if !trimmed.is_empty() && !trimmed.starts_with('#') {
                 let parts: Vec<&str> = trimmed.splitn(2, char::is_whitespace).collect();
                 if !parts.is_empty() {
                     let keyword = parts[0].to_uppercase();
                     let args = parts.get(1).map(|s| s.trim()).unwrap_or("");
-                    
+
                     let formatted = if args.is_empty() {
                         keyword
                     } else {
@@ -506,8 +519,14 @@ impl RunefileLanguageServer {
                     if *line != formatted {
                         edits.push(TextEdit {
                             range: Range {
-                                start: Position { line: i as u32, character: 0 },
-                                end: Position { line: i as u32, character: line.len() as u32 },
+                                start: Position {
+                                    line: i as u32,
+                                    character: 0,
+                                },
+                                end: Position {
+                                    line: i as u32,
+                                    character: line.len() as u32,
+                                },
                             },
                             new_text: formatted,
                         });

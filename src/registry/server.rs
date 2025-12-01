@@ -2,8 +2,8 @@
 //!
 //! Implements the OCI Distribution Specification for a Docker-compatible registry.
 
-use super::storage::RegistryStorage;
 use super::auth::RegistryAuth;
+use super::storage::RegistryStorage;
 use crate::error::{Result, RuneError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -72,7 +72,7 @@ impl Default for RegistryConfig {
             anonymous_pull: true,
             anonymous_push: false,
             delete_enabled: true,
-            max_manifest_size: 4 * 1024 * 1024, // 4MB
+            max_manifest_size: 4 * 1024 * 1024,      // 4MB
             max_layer_size: 10 * 1024 * 1024 * 1024, // 10GB
         }
     }
@@ -268,10 +268,15 @@ impl RegistryServer {
     }
 
     /// List repositories (GET /v2/_catalog)
-    pub async fn list_repositories(&self, n: Option<usize>, last: Option<String>) -> Result<CatalogResponse> {
+    pub async fn list_repositories(
+        &self,
+        n: Option<usize>,
+        last: Option<String>,
+    ) -> Result<CatalogResponse> {
         let repos = self.storage.list_repositories().await?;
-        
-        let mut filtered: Vec<String> = repos.into_iter()
+
+        let mut filtered: Vec<String> = repos
+            .into_iter()
             .filter(|r| {
                 if let Some(ref last) = last {
                     r > last
@@ -293,10 +298,16 @@ impl RegistryServer {
     }
 
     /// List tags (GET /v2/{name}/tags/list)
-    pub async fn list_tags(&self, name: &str, n: Option<usize>, last: Option<String>) -> Result<TagsListResponse> {
+    pub async fn list_tags(
+        &self,
+        name: &str,
+        n: Option<usize>,
+        last: Option<String>,
+    ) -> Result<TagsListResponse> {
         let tags = self.storage.list_tags(name).await?;
 
-        let mut filtered: Vec<String> = tags.into_iter()
+        let mut filtered: Vec<String> = tags
+            .into_iter()
             .filter(|t| {
                 if let Some(ref last) = last {
                     t > last
@@ -329,7 +340,13 @@ impl RegistryServer {
     }
 
     /// Put manifest (PUT /v2/{name}/manifests/{reference})
-    pub async fn put_manifest(&self, name: &str, reference: &str, content_type: &str, body: Vec<u8>) -> Result<String> {
+    pub async fn put_manifest(
+        &self,
+        name: &str,
+        reference: &str,
+        content_type: &str,
+        body: Vec<u8>,
+    ) -> Result<String> {
         // Validate size
         if body.len() > self.config.max_manifest_size {
             return Err(RuneError::InvalidConfig(format!(
@@ -343,7 +360,10 @@ impl RegistryServer {
         self.validate_manifest(content_type, &body)?;
 
         // Store manifest
-        let digest = self.storage.put_manifest(name, reference, content_type, &body).await?;
+        let digest = self
+            .storage
+            .put_manifest(name, reference, content_type, &body)
+            .await?;
 
         Ok(digest)
     }
@@ -351,7 +371,9 @@ impl RegistryServer {
     /// Delete manifest (DELETE /v2/{name}/manifests/{reference})
     pub async fn delete_manifest(&self, name: &str, reference: &str) -> Result<()> {
         if !self.config.delete_enabled {
-            return Err(RuneError::PermissionDenied("Delete operations are disabled".to_string()));
+            return Err(RuneError::PermissionDenied(
+                "Delete operations are disabled".to_string(),
+            ));
         }
 
         self.storage.delete_manifest(name, reference).await
@@ -370,14 +392,21 @@ impl RegistryServer {
     /// Delete blob (DELETE /v2/{name}/blobs/{digest})
     pub async fn delete_blob(&self, name: &str, digest: &str) -> Result<()> {
         if !self.config.delete_enabled {
-            return Err(RuneError::PermissionDenied("Delete operations are disabled".to_string()));
+            return Err(RuneError::PermissionDenied(
+                "Delete operations are disabled".to_string(),
+            ));
         }
 
         self.storage.delete_blob(name, digest).await
     }
 
     /// Start blob upload (POST /v2/{name}/blobs/uploads/)
-    pub async fn start_upload(&self, name: &str, digest: Option<String>, mount_from: Option<String>) -> Result<(String, Option<String>)> {
+    pub async fn start_upload(
+        &self,
+        name: &str,
+        digest: Option<String>,
+        mount_from: Option<String>,
+    ) -> Result<(String, Option<String>)> {
         // Check for cross-repository mount
         if let (Some(ref d), Some(ref from)) = (&digest, &mount_from) {
             if self.storage.blob_exists(from, d).await.is_ok() {
@@ -413,16 +442,24 @@ impl RegistryServer {
     /// Get upload status (GET /v2/{name}/blobs/uploads/{uuid})
     pub async fn get_upload_status(&self, _name: &str, uuid: &str) -> Result<u64> {
         let uploads = self.uploads.read().await;
-        let session = uploads.get(uuid)
+        let session = uploads
+            .get(uuid)
             .ok_or_else(|| RuneError::Internal(format!("Upload {} not found", uuid)))?;
-        
+
         Ok(session.offset)
     }
 
     /// Upload chunk (PATCH /v2/{name}/blobs/uploads/{uuid})
-    pub async fn upload_chunk(&self, _name: &str, uuid: &str, data: Vec<u8>, content_range: Option<(u64, u64)>) -> Result<u64> {
+    pub async fn upload_chunk(
+        &self,
+        _name: &str,
+        uuid: &str,
+        data: Vec<u8>,
+        content_range: Option<(u64, u64)>,
+    ) -> Result<u64> {
         let mut uploads = self.uploads.write().await;
-        let session = uploads.get_mut(uuid)
+        let session = uploads
+            .get_mut(uuid)
             .ok_or_else(|| RuneError::Internal(format!("Upload {} not found", uuid)))?;
 
         // Validate range if provided
@@ -446,7 +483,13 @@ impl RegistryServer {
     }
 
     /// Complete upload (PUT /v2/{name}/blobs/uploads/{uuid})
-    pub async fn complete_upload(&self, name: &str, uuid: &str, digest: &str, data: Option<Vec<u8>>) -> Result<String> {
+    pub async fn complete_upload(
+        &self,
+        name: &str,
+        uuid: &str,
+        digest: &str,
+        data: Option<Vec<u8>>,
+    ) -> Result<String> {
         // Append final data if provided
         if let Some(d) = data {
             self.upload_chunk(name, uuid, d, None).await?;

@@ -58,13 +58,13 @@ impl Container {
 
         self.config.status = ContainerStatus::Running;
         self.config.started_at = Some(Utc::now());
-        
+
         // In a real implementation, this would:
         // 1. Create namespaces (PID, NET, MNT, UTS, IPC, USER)
         // 2. Set up cgroups for resource limits
         // 3. Set up the root filesystem
         // 4. Execute the container process
-        
+
         Ok(())
     }
 
@@ -77,7 +77,7 @@ impl Container {
         self.config.status = ContainerStatus::Stopped;
         self.config.finished_at = Some(Utc::now());
         self.config.exit_code = Some(0);
-        
+
         Ok(())
     }
 
@@ -105,15 +105,16 @@ impl Container {
     pub fn kill(&mut self, signal: Option<i32>) -> Result<()> {
         let _signal = signal.unwrap_or(15); // SIGTERM
 
-        if self.config.status != ContainerStatus::Running 
-            && self.config.status != ContainerStatus::Paused {
+        if self.config.status != ContainerStatus::Running
+            && self.config.status != ContainerStatus::Paused
+        {
             return Err(RuneError::ContainerNotRunning(self.config.id.clone()));
         }
 
         self.config.status = ContainerStatus::Exited;
         self.config.finished_at = Some(Utc::now());
         self.config.exit_code = Some(137); // Killed
-        
+
         Ok(())
     }
 
@@ -121,17 +122,17 @@ impl Container {
     pub fn remove(&mut self) -> Result<()> {
         if self.config.status == ContainerStatus::Running {
             return Err(RuneError::Container(
-                "Cannot remove a running container".to_string()
+                "Cannot remove a running container".to_string(),
             ));
         }
 
         self.config.status = ContainerStatus::Removing;
-        
+
         // Clean up container resources
         if self.bundle.exists() {
             std::fs::remove_dir_all(&self.bundle)?;
         }
-        
+
         Ok(())
     }
 }

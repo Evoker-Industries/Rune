@@ -2,15 +2,15 @@
 //!
 //! Implements a Docker-compatible daemon that listens on a Unix socket.
 
+use super::api::ApiHandler;
+use crate::container::ContainerManager;
+use crate::error::{Result, RuneError};
+use std::fs;
+use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::net::UnixListener;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::io::{BufRead, BufReader, Read, Write};
-use std::fs;
-use crate::container::ContainerManager;
-use crate::error::{Result, RuneError};
-use super::api::ApiHandler;
-use tracing::{info, error, debug};
+use tracing::{debug, error, info};
 
 /// Default socket path for the Rune daemon
 pub const DEFAULT_SOCKET_PATH: &str = "/var/run/rune.sock";
@@ -57,9 +57,8 @@ impl RuneDaemon {
         fs::create_dir_all(config.data_dir.join("volumes"))?;
         fs::create_dir_all(config.data_dir.join("networks"))?;
 
-        let container_manager = Arc::new(ContainerManager::new(
-            config.data_dir.join("containers"),
-        )?);
+        let container_manager =
+            Arc::new(ContainerManager::new(config.data_dir.join("containers"))?);
 
         let api_handler = ApiHandler::new(container_manager.clone());
 
@@ -111,9 +110,10 @@ impl RuneDaemon {
 
     /// Accept and handle incoming connections
     fn accept_connections(&self) -> Result<()> {
-        let listener = self.listener.as_ref().ok_or_else(|| {
-            RuneError::Daemon("Listener not initialized".to_string())
-        })?;
+        let listener = self
+            .listener
+            .as_ref()
+            .ok_or_else(|| RuneError::Daemon("Listener not initialized".to_string()))?;
 
         for stream in listener.incoming() {
             match stream {

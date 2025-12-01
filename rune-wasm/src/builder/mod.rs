@@ -8,22 +8,69 @@ use wasm_bindgen::prelude::*;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum BuildInstruction {
-    From { image: String, tag: Option<String>, alias: Option<String> },
-    Run { command: String, shell: bool },
-    Copy { src: Vec<String>, dest: String, from: Option<String> },
-    Add { src: Vec<String>, dest: String },
-    Cmd { command: Vec<String>, shell: bool },
-    Entrypoint { command: Vec<String>, shell: bool },
-    Env { key: String, value: String },
-    Arg { name: String, default: Option<String> },
-    Workdir { path: String },
-    User { user: String, group: Option<String> },
-    Expose { port: u16, protocol: String },
-    Volume { paths: Vec<String> },
-    Label { labels: HashMap<String, String> },
-    Healthcheck { cmd: Option<String>, interval: Option<String>, timeout: Option<String>, retries: Option<u32> },
-    Stopsignal { signal: String },
-    Shell { shell: Vec<String> },
+    From {
+        image: String,
+        tag: Option<String>,
+        alias: Option<String>,
+    },
+    Run {
+        command: String,
+        shell: bool,
+    },
+    Copy {
+        src: Vec<String>,
+        dest: String,
+        from: Option<String>,
+    },
+    Add {
+        src: Vec<String>,
+        dest: String,
+    },
+    Cmd {
+        command: Vec<String>,
+        shell: bool,
+    },
+    Entrypoint {
+        command: Vec<String>,
+        shell: bool,
+    },
+    Env {
+        key: String,
+        value: String,
+    },
+    Arg {
+        name: String,
+        default: Option<String>,
+    },
+    Workdir {
+        path: String,
+    },
+    User {
+        user: String,
+        group: Option<String>,
+    },
+    Expose {
+        port: u16,
+        protocol: String,
+    },
+    Volume {
+        paths: Vec<String>,
+    },
+    Label {
+        labels: HashMap<String, String>,
+    },
+    Healthcheck {
+        cmd: Option<String>,
+        interval: Option<String>,
+        timeout: Option<String>,
+        retries: Option<u32>,
+    },
+    Stopsignal {
+        signal: String,
+    },
+    Shell {
+        shell: Vec<String>,
+    },
 }
 
 /// Build stage
@@ -94,7 +141,8 @@ impl RunefileBuilder {
 
                     for instruction in &stage.instructions {
                         match instruction {
-                            BuildInstruction::Copy { src, dest, .. } | BuildInstruction::Add { src, dest, .. } => {
+                            BuildInstruction::Copy { src, dest, .. }
+                            | BuildInstruction::Add { src, dest, .. } => {
                                 if src.is_empty() {
                                     errors.push("COPY/ADD has no source files".to_string());
                                 }
@@ -220,35 +268,62 @@ impl RunefileBuilder {
             "COPY" => {
                 let parts: Vec<&str> = args.split_whitespace().collect();
                 let from = if args.starts_with("--from=") {
-                    parts.first().and_then(|p| p.strip_prefix("--from=")).map(|s| s.to_string())
+                    parts
+                        .first()
+                        .and_then(|p| p.strip_prefix("--from="))
+                        .map(|s| s.to_string())
                 } else {
                     None
                 };
-                let filtered: Vec<&str> = parts.iter().filter(|p| !p.starts_with("--")).copied().collect();
+                let filtered: Vec<&str> = parts
+                    .iter()
+                    .filter(|p| !p.starts_with("--"))
+                    .copied()
+                    .collect();
                 let dest = filtered.last().map(|s| s.to_string()).unwrap_or_default();
-                let src: Vec<String> = filtered.iter().take(filtered.len().saturating_sub(1)).map(|s| s.to_string()).collect();
+                let src: Vec<String> = filtered
+                    .iter()
+                    .take(filtered.len().saturating_sub(1))
+                    .map(|s| s.to_string())
+                    .collect();
                 Ok(BuildInstruction::Copy { src, dest, from })
             }
             "ADD" => {
                 let parts: Vec<&str> = args.split_whitespace().collect();
                 let dest = parts.last().map(|s| s.to_string()).unwrap_or_default();
-                let src: Vec<String> = parts.iter().take(parts.len().saturating_sub(1)).map(|s| s.to_string()).collect();
+                let src: Vec<String> = parts
+                    .iter()
+                    .take(parts.len().saturating_sub(1))
+                    .map(|s| s.to_string())
+                    .collect();
                 Ok(BuildInstruction::Add { src, dest })
             }
             "CMD" => {
                 if args.starts_with('[') {
                     let command: Vec<String> = serde_json::from_str(args).unwrap_or_default();
-                    Ok(BuildInstruction::Cmd { command, shell: false })
+                    Ok(BuildInstruction::Cmd {
+                        command,
+                        shell: false,
+                    })
                 } else {
-                    Ok(BuildInstruction::Cmd { command: vec![args.to_string()], shell: true })
+                    Ok(BuildInstruction::Cmd {
+                        command: vec![args.to_string()],
+                        shell: true,
+                    })
                 }
             }
             "ENTRYPOINT" => {
                 if args.starts_with('[') {
                     let command: Vec<String> = serde_json::from_str(args).unwrap_or_default();
-                    Ok(BuildInstruction::Entrypoint { command, shell: false })
+                    Ok(BuildInstruction::Entrypoint {
+                        command,
+                        shell: false,
+                    })
                 } else {
-                    Ok(BuildInstruction::Entrypoint { command: vec![args.to_string()], shell: true })
+                    Ok(BuildInstruction::Entrypoint {
+                        command: vec![args.to_string()],
+                        shell: true,
+                    })
                 }
             }
             "ENV" => {
@@ -274,10 +349,15 @@ impl RunefileBuilder {
                         default: Some(args[eq_pos + 1..].trim().to_string()),
                     })
                 } else {
-                    Ok(BuildInstruction::Arg { name: args.trim().to_string(), default: None })
+                    Ok(BuildInstruction::Arg {
+                        name: args.trim().to_string(),
+                        default: None,
+                    })
                 }
             }
-            "WORKDIR" => Ok(BuildInstruction::Workdir { path: args.to_string() }),
+            "WORKDIR" => Ok(BuildInstruction::Workdir {
+                path: args.to_string(),
+            }),
             "USER" => {
                 let parts: Vec<&str> = args.splitn(2, ':').collect();
                 Ok(BuildInstruction::User {
@@ -287,7 +367,9 @@ impl RunefileBuilder {
             }
             "EXPOSE" => {
                 let parts: Vec<&str> = args.split('/').collect();
-                let port: u16 = parts[0].parse().map_err(|_| format!("Line {}: Invalid port", line_num))?;
+                let port: u16 = parts[0]
+                    .parse()
+                    .map_err(|_| format!("Line {}: Invalid port", line_num))?;
                 let protocol = parts.get(1).unwrap_or(&"tcp").to_string();
                 Ok(BuildInstruction::Expose { port, protocol })
             }
@@ -312,7 +394,12 @@ impl RunefileBuilder {
             }
             "HEALTHCHECK" => {
                 if args.trim().to_uppercase() == "NONE" {
-                    return Ok(BuildInstruction::Healthcheck { cmd: None, interval: None, timeout: None, retries: None });
+                    return Ok(BuildInstruction::Healthcheck {
+                        cmd: None,
+                        interval: None,
+                        timeout: None,
+                        retries: None,
+                    });
                 }
                 let mut cmd = None;
                 let mut interval = None;
@@ -333,15 +420,25 @@ impl RunefileBuilder {
                     }
                     i += 1;
                 }
-                Ok(BuildInstruction::Healthcheck { cmd, interval, timeout, retries })
+                Ok(BuildInstruction::Healthcheck {
+                    cmd,
+                    interval,
+                    timeout,
+                    retries,
+                })
             }
-            "STOPSIGNAL" => Ok(BuildInstruction::Stopsignal { signal: args.to_string() }),
+            "STOPSIGNAL" => Ok(BuildInstruction::Stopsignal {
+                signal: args.to_string(),
+            }),
             "SHELL" => {
                 let shell: Vec<String> = serde_json::from_str(args)
                     .map_err(|_| format!("Line {}: SHELL requires JSON array", line_num))?;
                 Ok(BuildInstruction::Shell { shell })
             }
-            _ => Err(format!("Line {}: Unknown instruction: {}", line_num, instruction)),
+            _ => Err(format!(
+                "Line {}: Unknown instruction: {}",
+                line_num, instruction
+            )),
         }
     }
 }

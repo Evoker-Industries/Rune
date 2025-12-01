@@ -3,11 +3,11 @@
 //! Provides functionality for creating and managing container processes
 //! with proper namespace isolation.
 
-use crate::error::{Result, RuneError};
-use super::namespace::{NamespaceType, NamespaceManager};
-use super::cgroup::{CgroupManager, CgroupConfig};
+use super::cgroup::{CgroupConfig, CgroupManager};
 use super::mount::MountManager;
+use super::namespace::{NamespaceManager, NamespaceType};
 use super::syscall;
+use crate::error::{Result, RuneError};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -180,14 +180,12 @@ impl ContainerProcess {
     }
 
     /// Start the container process
-    /// 
+    ///
     /// This will fork the current process and set up namespaces, cgroups,
     /// and the root filesystem in the child process.
     pub fn start(&mut self) -> Result<u32> {
         // Calculate clone flags from namespaces
-        let ns_manager = NamespaceManager::new(
-            self.container_id.as_deref().unwrap_or("unknown")
-        );
+        let ns_manager = NamespaceManager::new(self.container_id.as_deref().unwrap_or("unknown"));
         let clone_flags = ns_manager.get_clone_flags(&self.namespaces);
 
         // Fork the process with new namespaces
@@ -201,7 +199,7 @@ impl ContainerProcess {
             // Parent process
             self.pid = Some(pid);
             self.state = ProcessState::Running;
-            
+
             // Set up user namespace mappings if needed
             if self.namespaces.contains(&NamespaceType::User) {
                 // Map root in container to current user
@@ -209,10 +207,10 @@ impl ContainerProcess {
                 let gid = unsafe { libc::getgid() };
                 let uid_map = format!("0 {} 1", uid);
                 let gid_map = format!("0 {} 1", gid);
-                
+
                 // Give the child time to start
                 std::thread::sleep(std::time::Duration::from_millis(10));
-                
+
                 let _ = ns_manager.setup_user_namespace(pid, &uid_map, &gid_map);
             }
 
@@ -223,8 +221,8 @@ impl ContainerProcess {
     /// Fork with new namespaces using clone
     fn fork_with_namespaces(&self, flags: i32) -> Result<u32> {
         // Use fork for simplicity; clone would require more setup
-        let pid = syscall::fork()
-            .map_err(|e| RuneError::Runtime(format!("Failed to fork: {}", e)))?;
+        let pid =
+            syscall::fork().map_err(|e| RuneError::Runtime(format!("Failed to fork: {}", e)))?;
 
         if pid == 0 {
             // Child: unshare namespaces
@@ -247,13 +245,13 @@ impl ContainerProcess {
         if let Some(ref rootfs) = self.rootfs {
             let mount_manager = MountManager::new();
             let rootfs_str = rootfs.to_string_lossy();
-            
+
             // Setup rootfs with essential mounts
             mount_manager.setup_rootfs(&rootfs_str)?;
-            
+
             // Create devices
             mount_manager.create_devices(&rootfs_str)?;
-            
+
             // Pivot to new root
             mount_manager.pivot_root(&rootfs_str, "/.pivot_root")?;
         }
@@ -272,7 +270,10 @@ impl ContainerProcess {
         // Execute the command
         if !self.config.args.is_empty() {
             let args: Vec<&str> = self.config.args.iter().map(|s| s.as_str()).collect();
-            let env: Vec<String> = self.config.env.iter()
+            let env: Vec<String> = self
+                .config
+                .env
+                .iter()
                 .map(|(k, v)| format!("{}={}", k, v))
                 .collect();
             let env_refs: Vec<&str> = env.iter().map(|s| s.as_str()).collect();
@@ -289,7 +290,7 @@ impl ContainerProcess {
         if let Some(pid) = self.pid {
             let (_, status) = syscall::waitpid(pid as i32, 0)
                 .map_err(|e| RuneError::Runtime(format!("Failed to wait: {}", e)))?;
-            
+
             // Extract exit code from status
             let exit_code = if libc::WIFEXITED(status) {
                 libc::WEXITSTATUS(status)
@@ -301,7 +302,7 @@ impl ContainerProcess {
 
             self.exit_code = Some(exit_code);
             self.state = ProcessState::Exited;
-            
+
             Ok(exit_code)
         } else {
             Err(RuneError::Runtime("Process not started".to_string()))
@@ -313,11 +314,11 @@ impl ContainerProcess {
         if let Some(pid) = self.pid {
             syscall::kill(pid as i32, signal)
                 .map_err(|e| RuneError::Runtime(format!("Failed to kill: {}", e)))?;
-            
+
             if signal == libc::SIGKILL || signal == libc::SIGTERM {
                 self.state = ProcessState::Stopped;
             }
-            
+
             Ok(())
         } else {
             Err(RuneError::Runtime("Process not started".to_string()))
@@ -358,17 +359,20 @@ impl ContainerExec {
     /// Execute a command in the container's namespaces
     pub fn exec(&self) -> Result<u32> {
         // Fork first
-        let pid = syscall::fork()
-            .map_err(|e| RuneError::Runtime(format!("Failed to fork: {}", e)))?;
+        let pid =
+            syscall::fork().map_err(|e| RuneError::Runtime(format!("Failed to fork: {}", e)))?;
 
         if pid == 0 {
             // Child process: enter namespaces
             self.enter_namespaces()?;
-            
+
             // Execute the command
             if !self.config.args.is_empty() {
                 let args: Vec<&str> = self.config.args.iter().map(|s| s.as_str()).collect();
-                let env: Vec<String> = self.config.env.iter()
+                let env: Vec<String> = self
+                    .config
+                    .env
+                    .iter()
                     .map(|(k, v)| format!("{}={}", k, v))
                     .collect();
                 let env_refs: Vec<&str> = env.iter().map(|s| s.as_str()).collect();
@@ -376,7 +380,7 @@ impl ContainerExec {
                 syscall::execve(&args[0], &args, &env_refs)
                     .map_err(|e| RuneError::Runtime(format!("Failed to exec: {}", e)))?;
             }
-            
+
             std::process::exit(0);
         }
 
@@ -389,7 +393,7 @@ impl ContainerExec {
         use std::os::unix::io::AsRawFd;
 
         use super::syscall::clone_flags;
-        
+
         let ns_types = [
             ("user", libc::CLONE_NEWUSER),
             ("mnt", libc::CLONE_NEWNS),
@@ -402,7 +406,7 @@ impl ContainerExec {
 
         for (ns_name, ns_flag) in ns_types {
             let ns_path = format!("/proc/{}/ns/{}", self.container_pid, ns_name);
-            
+
             if let Ok(file) = File::open(&ns_path) {
                 let fd = file.as_raw_fd();
                 let result = unsafe { libc::setns(fd, ns_flag) };
@@ -450,7 +454,7 @@ mod tests {
         let config = ProcessConfig::new(vec!["/bin/sh".to_string()]);
         let namespaces = vec![NamespaceType::Pid, NamespaceType::Mount];
         let process = ContainerProcess::new(config, namespaces);
-        
+
         assert!(process.is_ok());
         let process = process.unwrap();
         assert_eq!(process.state(), ProcessState::Creating);

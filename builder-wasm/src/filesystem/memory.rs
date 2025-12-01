@@ -33,10 +33,13 @@ impl InMemoryFilesystem {
     #[wasm_bindgen(js_name = writeFile)]
     pub fn write_file(&mut self, path: &str, content: &[u8]) {
         let normalized = Self::normalize_path(path);
-        self.files.insert(normalized, MemoryFile {
-            content: content.to_vec(),
-            is_dir: false,
-        });
+        self.files.insert(
+            normalized,
+            MemoryFile {
+                content: content.to_vec(),
+                is_dir: false,
+            },
+        );
     }
 
     /// Write a text file to memory
@@ -49,13 +52,17 @@ impl InMemoryFilesystem {
     #[wasm_bindgen(js_name = readFile)]
     pub fn read_file(&self, path: &str) -> Option<Vec<u8>> {
         let normalized = Self::normalize_path(path);
-        self.files.get(&normalized).filter(|f| !f.is_dir).map(|f| f.content.clone())
+        self.files
+            .get(&normalized)
+            .filter(|f| !f.is_dir)
+            .map(|f| f.content.clone())
     }
 
     /// Read a text file from memory
     #[wasm_bindgen(js_name = readTextFile)]
     pub fn read_text_file(&self, path: &str) -> Option<String> {
-        self.read_file(path).and_then(|bytes| String::from_utf8(bytes).ok())
+        self.read_file(path)
+            .and_then(|bytes| String::from_utf8(bytes).ok())
     }
 
     /// Check if a path exists
@@ -69,10 +76,13 @@ impl InMemoryFilesystem {
     #[wasm_bindgen]
     pub fn mkdir(&mut self, path: &str) {
         let normalized = Self::normalize_path(path);
-        self.files.insert(normalized, MemoryFile {
-            content: Vec::new(),
-            is_dir: true,
-        });
+        self.files.insert(
+            normalized,
+            MemoryFile {
+                content: Vec::new(),
+                is_dir: true,
+            },
+        );
     }
 
     /// Remove a file or directory
@@ -92,7 +102,8 @@ impl InMemoryFilesystem {
             format!("{}/", normalized)
         };
 
-        let entries: Vec<serde_json::Value> = self.files
+        let entries: Vec<serde_json::Value> = self
+            .files
             .keys()
             .filter(|k| k.starts_with(&prefix) && *k != &normalized)
             .filter_map(|k| {
@@ -102,7 +113,11 @@ impl InMemoryFilesystem {
                     return None;
                 }
                 let full_path = format!("{}{}", prefix, name);
-                let is_dir = self.files.get(&full_path).map(|f| f.is_dir).unwrap_or(false);
+                let is_dir = self
+                    .files
+                    .get(&full_path)
+                    .map(|f| f.is_dir)
+                    .unwrap_or(false);
                 Some(serde_json::json!({
                     "name": name,
                     "isDir": is_dir
@@ -124,7 +139,10 @@ impl InMemoryFilesystem {
     #[wasm_bindgen(js_name = isDir)]
     pub fn is_dir(&self, path: &str) -> bool {
         let normalized = Self::normalize_path(path);
-        self.files.get(&normalized).map(|f| f.is_dir).unwrap_or(false)
+        self.files
+            .get(&normalized)
+            .map(|f| f.is_dir)
+            .unwrap_or(false)
     }
 
     /// Clear all files
@@ -142,11 +160,14 @@ impl InMemoryFilesystem {
     /// Export all files as JSON (for debugging/serialization)
     #[wasm_bindgen(js_name = exportAsJson)]
     pub fn export_as_json(&self) -> String {
-        let export: HashMap<String, String> = self.files
+        let export: HashMap<String, String> = self
+            .files
             .iter()
             .filter(|(_, f)| !f.is_dir)
             .filter_map(|(k, v)| {
-                String::from_utf8(v.content.clone()).ok().map(|s| (k.clone(), s))
+                String::from_utf8(v.content.clone())
+                    .ok()
+                    .map(|s| (k.clone(), s))
             })
             .collect();
         serde_json::to_string(&export).unwrap_or_else(|_| "{}".to_string())
@@ -194,7 +215,10 @@ mod tests {
     fn test_write_and_read() {
         let mut fs = InMemoryFilesystem::new();
         fs.write_text_file("/test.txt", "hello world");
-        assert_eq!(fs.read_text_file("/test.txt"), Some("hello world".to_string()));
+        assert_eq!(
+            fs.read_text_file("/test.txt"),
+            Some("hello world".to_string())
+        );
     }
 
     #[test]

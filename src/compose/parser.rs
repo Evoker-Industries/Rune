@@ -31,7 +31,7 @@ impl ComposeParser {
     pub fn parse_file(path: &Path) -> Result<ComposeConfig> {
         let content = std::fs::read_to_string(path)
             .map_err(|e| RuneError::ComposeParse(format!("Failed to read file: {}", e)))?;
-        
+
         Self::parse_str(&content)
     }
 
@@ -181,7 +181,10 @@ impl ComposeParser {
     }
 
     /// Interpolate environment variables in config
-    pub fn interpolate(config: &mut ComposeConfig, env: &std::collections::HashMap<String, String>) {
+    pub fn interpolate(
+        config: &mut ComposeConfig,
+        env: &std::collections::HashMap<String, String>,
+    ) {
         // This is a simplified version - full implementation would recursively
         // interpolate all string fields
 
@@ -224,11 +227,13 @@ fn interpolate_string(s: &str, env: &std::collections::HashMap<String, String>) 
 
     // Handle ${VAR:-default} syntax
     let re = regex::Regex::new(r"\$\{([A-Za-z_][A-Za-z0-9_]*):-([^}]*)\}").unwrap();
-    result = re.replace_all(&result, |caps: &regex::Captures| {
-        let var = &caps[1];
-        let default = &caps[2];
-        env.get(var).cloned().unwrap_or_else(|| default.to_string())
-    }).to_string();
+    result = re
+        .replace_all(&result, |caps: &regex::Captures| {
+            let var = &caps[1];
+            let default = &caps[2];
+            env.get(var).cloned().unwrap_or_else(|| default.to_string())
+        })
+        .to_string();
 
     result
 }

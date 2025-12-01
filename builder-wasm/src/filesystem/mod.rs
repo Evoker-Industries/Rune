@@ -124,7 +124,7 @@ impl BuilderFilesystem {
         let callback = self.read_file.as_ref()?;
         let this = JsValue::null();
         let arg = JsValue::from_str(path);
-        
+
         match callback.call1(&this, &arg) {
             Ok(result) => {
                 if result.is_null() || result.is_undefined() {
@@ -145,11 +145,11 @@ impl BuilderFilesystem {
             Some(cb) => cb,
             None => return false,
         };
-        
+
         let this = JsValue::null();
         let path_arg = JsValue::from_str(path);
         let contents_arg = js_sys::Uint8Array::from(contents);
-        
+
         callback.call2(&this, &path_arg, &contents_arg).is_ok()
     }
 
@@ -158,7 +158,7 @@ impl BuilderFilesystem {
         let callback = self.list_dir.as_ref()?;
         let this = JsValue::null();
         let arg = JsValue::from_str(path);
-        
+
         match callback.call1(&this, &arg) {
             Ok(result) => {
                 if result.is_null() || result.is_undefined() {
@@ -177,10 +177,10 @@ impl BuilderFilesystem {
             Some(cb) => cb,
             None => return false,
         };
-        
+
         let this = JsValue::null();
         let arg = JsValue::from_str(path);
-        
+
         match callback.call1(&this, &arg) {
             Ok(result) => result.as_bool().unwrap_or(false),
             Err(_) => false,
@@ -193,10 +193,10 @@ impl BuilderFilesystem {
             Some(cb) => cb,
             None => return false,
         };
-        
+
         let this = JsValue::null();
         let arg = JsValue::from_str(path);
-        
+
         callback.call1(&this, &arg).is_ok()
     }
 
@@ -205,7 +205,7 @@ impl BuilderFilesystem {
         let callback = self.stat.as_ref()?;
         let this = JsValue::null();
         let arg = JsValue::from_str(path);
-        
+
         match callback.call1(&this, &arg) {
             Ok(result) => {
                 if result.is_null() || result.is_undefined() {
@@ -224,10 +224,10 @@ impl BuilderFilesystem {
             Some(cb) => cb,
             None => return false,
         };
-        
+
         let this = JsValue::null();
         let arg = JsValue::from_str(path);
-        
+
         callback.call1(&this, &arg).is_ok()
     }
 
@@ -237,11 +237,11 @@ impl BuilderFilesystem {
             Some(cb) => cb,
             None => return false,
         };
-        
+
         let this = JsValue::null();
         let src_arg = JsValue::from_str(src);
         let dest_arg = JsValue::from_str(dest);
-        
+
         callback.call2(&this, &src_arg, &dest_arg).is_ok()
     }
 }

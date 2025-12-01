@@ -6,13 +6,13 @@ mod local;
 
 pub use local::LocalContainerManager;
 
+use futures::channel::oneshot;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{MessageEvent, WebSocket};
-use futures::channel::oneshot;
 
 use crate::utils::gloo_timers_sleep;
 
@@ -46,10 +46,10 @@ impl RuneClient {
     #[wasm_bindgen]
     pub async fn connect(&mut self) -> Result<(), JsValue> {
         let ws = WebSocket::new(&self.url)?;
-        
+
         let connected = self.connected.clone();
         let pending = self.pending_requests.clone();
-        
+
         // Set up onopen handler
         let onopen = Closure::wrap(Box::new(move || {
             *connected.borrow_mut() = true;
@@ -57,7 +57,7 @@ impl RuneClient {
         }) as Box<dyn FnMut()>);
         ws.set_onopen(Some(onopen.as_ref().unchecked_ref()));
         onopen.forget();
-        
+
         // Set up onmessage handler
         let pending_clone = pending.clone();
         let onmessage = Closure::wrap(Box::new(move |e: MessageEvent| {
@@ -74,14 +74,14 @@ impl RuneClient {
         }) as Box<dyn FnMut(MessageEvent)>);
         ws.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
         onmessage.forget();
-        
+
         // Set up onerror handler
         let onerror = Closure::wrap(Box::new(move |_e: web_sys::ErrorEvent| {
             web_sys::console::error_1(&"WebSocket error".into());
         }) as Box<dyn FnMut(web_sys::ErrorEvent)>);
         ws.set_onerror(Some(onerror.as_ref().unchecked_ref()));
         onerror.forget();
-        
+
         // Set up onclose handler
         let connected_close = self.connected.clone();
         let onclose = Closure::wrap(Box::new(move |_e: web_sys::CloseEvent| {
@@ -90,9 +90,9 @@ impl RuneClient {
         }) as Box<dyn FnMut(web_sys::CloseEvent)>);
         ws.set_onclose(Some(onclose.as_ref().unchecked_ref()));
         onclose.forget();
-        
+
         self.ws = Some(ws);
-        
+
         // Wait for connection
         let connected_wait = self.connected.clone();
         let mut attempts = 0;
@@ -100,11 +100,11 @@ impl RuneClient {
             gloo_timers_sleep(100).await;
             attempts += 1;
         }
-        
+
         if !*connected_wait.borrow() {
             return Err(JsValue::from_str("Connection timeout"));
         }
-        
+
         Ok(())
     }
 
@@ -174,7 +174,11 @@ impl RuneClient {
 
     /// Kill a container
     #[wasm_bindgen(js_name = killContainer)]
-    pub async fn kill_container(&self, id: &str, signal: Option<String>) -> Result<JsValue, JsValue> {
+    pub async fn kill_container(
+        &self,
+        id: &str,
+        signal: Option<String>,
+    ) -> Result<JsValue, JsValue> {
         let endpoint = match signal {
             Some(s) => format!("/containers/{}/kill?signal={}", id, s),
             None => format!("/containers/{}/kill", id),
@@ -195,7 +199,11 @@ impl RuneClient {
 
     /// Get container logs
     #[wasm_bindgen(js_name = getContainerLogs)]
-    pub async fn get_container_logs(&self, id: &str, tail: Option<i32>) -> Result<JsValue, JsValue> {
+    pub async fn get_container_logs(
+        &self,
+        id: &str,
+        tail: Option<i32>,
+    ) -> Result<JsValue, JsValue> {
         let endpoint = match tail {
             Some(n) => format!("/containers/{}/logs?stdout=true&stderr=true&tail={}", id, n),
             None => format!("/containers/{}/logs?stdout=true&stderr=true", id),
@@ -285,8 +293,14 @@ impl RuneClient {
 
     // Internal HTTP methods
     async fn http_get(&self, endpoint: &str) -> Result<JsValue, JsValue> {
-        let url = format!("{}{}", self.url.replace("ws://", "http://").replace("wss://", "https://"), endpoint);
-        
+        let url = format!(
+            "{}{}",
+            self.url
+                .replace("ws://", "http://")
+                .replace("wss://", "https://"),
+            endpoint
+        );
+
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
         let resp_value = JsFuture::from(window.fetch_with_str(&url)).await?;
         let resp: web_sys::Response = resp_value.dyn_into()?;
@@ -295,15 +309,21 @@ impl RuneClient {
     }
 
     async fn http_post(&self, endpoint: &str, body: &str) -> Result<JsValue, JsValue> {
-        let url = format!("{}{}", self.url.replace("ws://", "http://").replace("wss://", "https://"), endpoint);
-        
+        let url = format!(
+            "{}{}",
+            self.url
+                .replace("ws://", "http://")
+                .replace("wss://", "https://"),
+            endpoint
+        );
+
         let mut opts = web_sys::RequestInit::new();
         opts.method("POST");
         opts.body(Some(&JsValue::from_str(body)));
-        
+
         let request = web_sys::Request::new_with_str_and_init(&url, &opts)?;
         request.headers().set("Content-Type", "application/json")?;
-        
+
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
         let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
         let resp: web_sys::Response = resp_value.dyn_into()?;
@@ -312,13 +332,19 @@ impl RuneClient {
     }
 
     async fn http_delete(&self, endpoint: &str) -> Result<JsValue, JsValue> {
-        let url = format!("{}{}", self.url.replace("ws://", "http://").replace("wss://", "https://"), endpoint);
-        
+        let url = format!(
+            "{}{}",
+            self.url
+                .replace("ws://", "http://")
+                .replace("wss://", "https://"),
+            endpoint
+        );
+
         let mut opts = web_sys::RequestInit::new();
         opts.method("DELETE");
-        
+
         let request = web_sys::Request::new_with_str_and_init(&url, &opts)?;
-        
+
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window"))?;
         let resp_value = JsFuture::from(window.fetch_with_request(&request)).await?;
         let resp: web_sys::Response = resp_value.dyn_into()?;

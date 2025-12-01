@@ -163,9 +163,13 @@ impl ImageStore {
 
     /// Store an image
     pub fn store(&self, image: Image) -> Result<()> {
-        let mut images = self.images.write()
+        let mut images = self
+            .images
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
-        let mut tags = self.tags.write()
+        let mut tags = self
+            .tags
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
         // Update tag mappings
@@ -179,9 +183,13 @@ impl ImageStore {
 
     /// Get image by ID or tag
     pub fn get(&self, reference: &str) -> Result<Image> {
-        let images = self.images.read()
+        let images = self
+            .images
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
-        let tags = self.tags.read()
+        let tags = self
+            .tags
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         // Try direct ID lookup
@@ -208,7 +216,9 @@ impl ImageStore {
 
     /// List all images
     pub fn list(&self) -> Result<Vec<Image>> {
-        let images = self.images.read()
+        let images = self
+            .images
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         Ok(images.values().cloned().collect())
@@ -216,9 +226,13 @@ impl ImageStore {
 
     /// Remove an image
     pub fn remove(&self, reference: &str, force: bool) -> Result<()> {
-        let mut images = self.images.write()
+        let mut images = self
+            .images
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
-        let mut tags = self.tags.write()
+        let mut tags = self
+            .tags
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
         // Find the image
@@ -238,7 +252,8 @@ impl ImageStore {
             found.ok_or_else(|| RuneError::ImageNotFound(reference.to_string()))?
         };
 
-        let image = images.get(&id)
+        let image = images
+            .get(&id)
             .ok_or_else(|| RuneError::ImageNotFound(reference.to_string()))?;
 
         // Remove tag mappings
@@ -260,9 +275,13 @@ impl ImageStore {
 
     /// Tag an image
     pub fn tag(&self, source: &str, target: &str) -> Result<()> {
-        let mut images = self.images.write()
+        let mut images = self
+            .images
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
-        let mut tags = self.tags.write()
+        let mut tags = self
+            .tags
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
         // Find source image
@@ -294,11 +313,14 @@ impl ImageStore {
 
     /// Prune unused images
     pub fn prune(&self) -> Result<Vec<String>> {
-        let images = self.images.read()
+        let images = self
+            .images
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         // Find dangling images (no tags)
-        let dangling: Vec<String> = images.iter()
+        let dangling: Vec<String> = images
+            .iter()
             .filter(|(_, img)| img.repo_tags.is_empty())
             .map(|(id, _)| id.clone())
             .collect();

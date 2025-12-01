@@ -15,4 +15,4 @@ mod server;
 mod syntax;
 
 pub use server::RunefileLanguageServer;
-pub use syntax::{RunefileParser, Instruction, InstructionKind};
+pub use syntax::{Instruction, InstructionKind, RunefileParser};

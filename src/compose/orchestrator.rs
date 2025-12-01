@@ -1,6 +1,6 @@
 //! Docker Compose orchestrator
 
-use super::config::{ComposeConfig, ServiceConfig, DependsOnConfig};
+use super::config::{ComposeConfig, DependsOnConfig, ServiceConfig};
 use crate::container::{ContainerConfig, ContainerManager, ContainerStatus};
 use crate::error::{Result, RuneError};
 use crate::image::builder::{BuildContext, ImageBuilder};
@@ -86,7 +86,10 @@ impl ComposeOrchestrator {
 
         if !detach {
             // In non-detached mode, we would attach to logs here
-            tracing::info!("Project {} is running (attached mode not implemented)", self.project_name);
+            tracing::info!(
+                "Project {} is running (attached mode not implemented)",
+                self.project_name
+            );
         }
 
         Ok(())
@@ -112,16 +115,24 @@ impl ComposeOrchestrator {
 
     /// Start a specific service
     pub async fn start_service(&mut self, service_name: &str) -> Result<()> {
-        let service = self.config.services.get(service_name)
+        let service = self
+            .config
+            .services
+            .get(service_name)
             .ok_or_else(|| RuneError::ServiceNotFound(service_name.to_string()))?
             .clone();
 
-        let replicas = service.deploy
+        let replicas = service
+            .deploy
             .as_ref()
             .and_then(|d| d.replicas)
             .unwrap_or(1);
 
-        tracing::info!("Starting service {} with {} replicas", service_name, replicas);
+        tracing::info!(
+            "Starting service {} with {} replicas",
+            service_name,
+            replicas
+        );
 
         let mut container_ids = Vec::new();
 
@@ -132,19 +143,23 @@ impl ComposeOrchestrator {
                 format!("{}-{}-{}", self.project_name, service_name, i + 1)
             };
 
-            let container_config = self.service_to_container_config(service_name, &service, &container_name)?;
+            let container_config =
+                self.service_to_container_config(service_name, &service, &container_name)?;
 
             let id = self.container_manager.create(container_config)?;
             self.container_manager.start(&id)?;
             container_ids.push(id);
         }
 
-        self.service_states.insert(service_name.to_string(), ServiceState {
-            name: service_name.to_string(),
-            container_ids,
-            replicas,
-            state: ContainerStatus::Running,
-        });
+        self.service_states.insert(
+            service_name.to_string(),
+            ServiceState {
+                name: service_name.to_string(),
+                container_ids,
+                replicas,
+                state: ContainerStatus::Running,
+            },
+        );
 
         Ok(())
     }
@@ -175,19 +190,25 @@ impl ComposeOrchestrator {
 
     /// Scale a service
     pub async fn scale(&mut self, service_name: &str, replicas: u32) -> Result<()> {
-        let current = self.service_states.get(service_name)
+        let current = self
+            .service_states
+            .get(service_name)
             .map(|s| s.replicas)
             .unwrap_or(0);
 
         if replicas > current {
             // Scale up
-            let service = self.config.services.get(service_name)
+            let service = self
+                .config
+                .services
+                .get(service_name)
                 .ok_or_else(|| RuneError::ServiceNotFound(service_name.to_string()))?
                 .clone();
 
             for i in current..replicas {
                 let container_name = format!("{}-{}-{}", self.project_name, service_name, i + 1);
-                let container_config = self.service_to_container_config(service_name, &service, &container_name)?;
+                let container_config =
+                    self.service_to_container_config(service_name, &service, &container_name)?;
 
                 let id = self.container_manager.create(container_config)?;
                 self.container_manager.start(&id)?;
@@ -221,11 +242,11 @@ impl ComposeOrchestrator {
 
                 let context_path = match build_config {
                     super::config::BuildConfig::Simple(path) => self.working_dir.join(path),
-                    super::config::BuildConfig::Full(full) => {
-                        full.context.as_ref()
-                            .map(|p| self.working_dir.join(p))
-                            .unwrap_or_else(|| self.working_dir.clone())
-                    }
+                    super::config::BuildConfig::Full(full) => full
+                        .context
+                        .as_ref()
+                        .map(|p| self.working_dir.join(p))
+                        .unwrap_or_else(|| self.working_dir.clone()),
                 };
 
                 let build_context = BuildContext::new(context_path)
@@ -240,7 +261,12 @@ impl ComposeOrchestrator {
     }
 
     /// Get service logs
-    pub async fn logs(&self, service_name: Option<&str>, follow: bool, tail: Option<usize>) -> Result<Vec<String>> {
+    pub async fn logs(
+        &self,
+        service_name: Option<&str>,
+        follow: bool,
+        tail: Option<usize>,
+    ) -> Result<Vec<String>> {
         let mut logs = Vec::new();
 
         let services: Vec<&str> = if let Some(name) = service_name {
@@ -327,7 +353,9 @@ impl ComposeOrchestrator {
         service: &ServiceConfig,
         container_name: &str,
     ) -> Result<ContainerConfig> {
-        let image = service.image.clone()
+        let image = service
+            .image
+            .clone()
             .unwrap_or_else(|| format!("{}-{}:latest", self.project_name, service_name));
 
         let mut config = ContainerConfig::new(container_name, &image);
@@ -335,7 +363,9 @@ impl ComposeOrchestrator {
         // Set command
         if let Some(ref cmd) = service.command {
             config.cmd = match cmd {
-                super::config::CommandConfig::Shell(s) => vec!["/bin/sh".to_string(), "-c".to_string(), s.clone()],
+                super::config::CommandConfig::Shell(s) => {
+                    vec!["/bin/sh".to_string(), "-c".to_string(), s.clone()]
+                }
                 super::config::CommandConfig::Exec(arr) => arr.clone(),
             };
         }
@@ -427,8 +457,9 @@ services:
         let config = ComposeParser::parse_str(yaml).unwrap();
         let temp = tempdir().unwrap();
         let manager = Arc::new(ContainerManager::new(temp.path().to_path_buf()).unwrap());
-        
-        let orchestrator = ComposeOrchestrator::new("test", config, manager, temp.path().to_path_buf());
+
+        let orchestrator =
+            ComposeOrchestrator::new("test", config, manager, temp.path().to_path_buf());
         let order = orchestrator.get_start_order().unwrap();
 
         // db should come before api, api before web
@@ -457,8 +488,9 @@ services:
         let config = ComposeParser::parse_str(yaml).unwrap();
         let temp = tempdir().unwrap();
         let manager = Arc::new(ContainerManager::new(temp.path().to_path_buf()).unwrap());
-        
-        let orchestrator = ComposeOrchestrator::new("test", config, manager, temp.path().to_path_buf());
+
+        let orchestrator =
+            ComposeOrchestrator::new("test", config, manager, temp.path().to_path_buf());
         let result = orchestrator.get_start_order();
 
         assert!(result.is_err());

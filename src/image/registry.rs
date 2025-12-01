@@ -162,7 +162,8 @@ impl Registry {
                 ("scope", "repository:library/alpine:pull"),
             ];
 
-            let response = self.client
+            let response = self
+                .client
                 .get(token_url)
                 .query(&params)
                 .send()
@@ -170,7 +171,8 @@ impl Registry {
                 .map_err(|e| RuneError::Network(e.to_string()))?;
 
             if response.status().is_success() {
-                let token_response: TokenResponse = response.json()
+                let token_response: TokenResponse = response
+                    .json()
                     .await
                     .map_err(|e| RuneError::Network(e.to_string()))?;
                 self.token = Some(token_response.token);
@@ -184,7 +186,9 @@ impl Registry {
     pub async fn pull_manifest(&self, name: &str, reference: &str) -> Result<ImageManifest> {
         let url = format!("{}/v2/{}/manifests/{}", self.config.url, name, reference);
 
-        let mut request = self.client.get(&url)
+        let mut request = self
+            .client
+            .get(&url)
             .header("Accept", media_types::OCI_MANIFEST)
             .header("Accept", media_types::MANIFEST_V2);
 
@@ -192,7 +196,8 @@ impl Registry {
             request = request.header("Authorization", format!("Bearer {}", token));
         }
 
-        let response = request.send()
+        let response = request
+            .send()
             .await
             .map_err(|e| RuneError::Network(e.to_string()))?;
 
@@ -204,7 +209,8 @@ impl Registry {
             )));
         }
 
-        let manifest: ImageManifest = response.json()
+        let manifest: ImageManifest = response
+            .json()
             .await
             .map_err(|e| RuneError::Network(e.to_string()))?;
 
@@ -221,7 +227,8 @@ impl Registry {
             request = request.header("Authorization", format!("Bearer {}", token));
         }
 
-        let response = request.send()
+        let response = request
+            .send()
             .await
             .map_err(|e| RuneError::Network(e.to_string()))?;
 
@@ -232,7 +239,8 @@ impl Registry {
             )));
         }
 
-        let bytes = response.bytes()
+        let bytes = response
+            .bytes()
             .await
             .map_err(|e| RuneError::Network(e.to_string()))?;
 
@@ -250,7 +258,9 @@ impl Registry {
 
         let body = serde_json::to_string(manifest)?;
 
-        let mut request = self.client.put(&url)
+        let mut request = self
+            .client
+            .put(&url)
             .header("Content-Type", media_types::OCI_MANIFEST)
             .body(body);
 
@@ -258,7 +268,8 @@ impl Registry {
             request = request.header("Authorization", format!("Bearer {}", token));
         }
 
-        let response = request.send()
+        let response = request
+            .send()
             .await
             .map_err(|e| RuneError::Network(e.to_string()))?;
 
@@ -270,7 +281,8 @@ impl Registry {
         }
 
         // Get the digest from the response header
-        let digest = response.headers()
+        let digest = response
+            .headers()
             .get("Docker-Content-Digest")
             .and_then(|v| v.to_str().ok())
             .unwrap_or("")
@@ -290,7 +302,8 @@ impl Registry {
             request = request.header("Authorization", format!("Bearer {}", token));
         }
 
-        let response = request.send()
+        let response = request
+            .send()
             .await
             .map_err(|e| RuneError::Network(e.to_string()))?;
 
@@ -302,7 +315,8 @@ impl Registry {
         }
 
         // Get upload URL
-        let upload_url = response.headers()
+        let upload_url = response
+            .headers()
             .get("Location")
             .and_then(|v| v.to_str().ok())
             .ok_or_else(|| RuneError::Image("No upload location provided".to_string()))?
@@ -314,7 +328,9 @@ impl Registry {
         // Complete upload
         let url = format!("{}&digest={}", upload_url, digest);
 
-        let mut request = self.client.put(&url)
+        let mut request = self
+            .client
+            .put(&url)
             .header("Content-Type", "application/octet-stream")
             .body(data);
 
@@ -322,7 +338,8 @@ impl Registry {
             request = request.header("Authorization", format!("Bearer {}", token));
         }
 
-        let response = request.send()
+        let response = request
+            .send()
             .await
             .map_err(|e| RuneError::Network(e.to_string()))?;
 
@@ -346,7 +363,8 @@ impl Registry {
             request = request.header("Authorization", format!("Bearer {}", token));
         }
 
-        let response = request.send()
+        let response = request
+            .send()
             .await
             .map_err(|e| RuneError::Network(e.to_string()))?;
 
@@ -363,7 +381,8 @@ impl Registry {
             request = request.header("Authorization", format!("Bearer {}", token));
         }
 
-        let response = request.send()
+        let response = request
+            .send()
             .await
             .map_err(|e| RuneError::Network(e.to_string()))?;
 
@@ -374,7 +393,8 @@ impl Registry {
             )));
         }
 
-        let tags_response: TagsResponse = response.json()
+        let tags_response: TagsResponse = response
+            .json()
             .await
             .map_err(|e| RuneError::Network(e.to_string()))?;
 
@@ -391,7 +411,8 @@ impl Registry {
             request = request.header("Authorization", format!("Bearer {}", token));
         }
 
-        let response = request.send()
+        let response = request
+            .send()
             .await
             .map_err(|e| RuneError::Network(e.to_string()))?;
 
@@ -423,7 +444,7 @@ struct TagsResponse {
 
 /// Compute SHA256 digest of data using cryptographic hash
 pub fn sha256_digest(data: &[u8]) -> String {
-    use sha2::{Sha256, Digest};
+    use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
     hasher.update(data);
     let result = hasher.finalize();

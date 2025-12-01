@@ -208,12 +208,33 @@ pub struct HistoryEntry {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum BuildEvent {
-    StageStart { stage: usize, name: Option<String>, base: String },
-    StepStart { step: usize, instruction: String },
-    StepComplete { step: usize, layer_id: Option<String> },
-    StageComplete { stage: usize },
-    BuildComplete { image_id: String },
-    Error { message: String },
-    Warning { message: String },
-    Progress { message: String, percent: Option<u8> },
+    StageStart {
+        stage: usize,
+        name: Option<String>,
+        base: String,
+    },
+    StepStart {
+        step: usize,
+        instruction: String,
+    },
+    StepComplete {
+        step: usize,
+        layer_id: Option<String>,
+    },
+    StageComplete {
+        stage: usize,
+    },
+    BuildComplete {
+        image_id: String,
+    },
+    Error {
+        message: String,
+    },
+    Warning {
+        message: String,
+    },
+    Progress {
+        message: String,
+        percent: Option<u8>,
+    },
 }

@@ -65,7 +65,7 @@ impl ComposeParser {
             Ok(compose) => {
                 let mut order = Vec::new();
                 let mut visited = std::collections::HashSet::new();
-                
+
                 fn visit(
                     name: &str,
                     services: &HashMap<String, ComposeService>,
@@ -76,7 +76,7 @@ impl ComposeParser {
                         return;
                     }
                     visited.insert(name.to_string());
-                    
+
                     if let Some(service) = services.get(name) {
                         if let Some(deps) = &service.depends_on {
                             for dep in deps {
@@ -86,11 +86,11 @@ impl ComposeParser {
                     }
                     order.push(name.to_string());
                 }
-                
+
                 for name in compose.services.keys() {
                     visit(name, &compose.services, &mut visited, &mut order);
                 }
-                
+
                 serde_json::to_string(&order).unwrap_or_default()
             }
             Err(e) => serde_json::json!({ "error": e.to_string() }).to_string(),
@@ -109,11 +109,14 @@ impl ComposeParser {
                     if service.image.is_none() && service.build.is_none() {
                         errors.push(format!("Service '{}' has no image or build", name));
                     }
-                    
+
                     if let Some(deps) = &service.depends_on {
                         for dep in deps {
                             if !compose.services.contains_key(dep) {
-                                errors.push(format!("Service '{}' depends on unknown service '{}'", name, dep));
+                                errors.push(format!(
+                                    "Service '{}' depends on unknown service '{}'",
+                                    name, dep
+                                ));
                             }
                         }
                     }

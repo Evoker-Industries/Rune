@@ -3,8 +3,8 @@
 //! Provides functionality for creating and managing Linux namespaces
 //! for container isolation.
 
-use crate::error::{Result, RuneError};
 use super::syscall::{clone_flags, unshare};
+use crate::error::{Result, RuneError};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::Path;
@@ -81,10 +81,7 @@ pub struct Namespace {
 impl Namespace {
     /// Create a new namespace reference
     pub fn new(ns_type: NamespaceType) -> Self {
-        Self {
-            ns_type,
-            pid: None,
-        }
+        Self { ns_type, pid: None }
     }
 
     /// Create a namespace reference for a specific process
@@ -102,7 +99,10 @@ impl Namespace {
 
     /// Get the path to the namespace file
     pub fn path(&self) -> String {
-        let pid = self.pid.map(|p| p.to_string()).unwrap_or_else(|| "self".to_string());
+        let pid = self
+            .pid
+            .map(|p| p.to_string())
+            .unwrap_or_else(|| "self".to_string());
         format!("/proc/{}/ns/{}", pid, self.ns_type.proc_name())
     }
 
@@ -116,7 +116,7 @@ impl Namespace {
         let path = self.path();
         let metadata = std::fs::metadata(&path)
             .map_err(|e| RuneError::Runtime(format!("Failed to get namespace metadata: {}", e)))?;
-        
+
         use std::os::unix::fs::MetadataExt;
         Ok(metadata.ino())
     }
@@ -160,7 +160,8 @@ impl NamespaceManager {
             .write(true)
             .open(&uid_map_path)
             .map_err(|e| RuneError::Runtime(format!("Failed to open uid_map: {}", e)))?;
-        uid_file.write_all(uid_map.as_bytes())
+        uid_file
+            .write_all(uid_map.as_bytes())
             .map_err(|e| RuneError::Runtime(format!("Failed to write uid_map: {}", e)))?;
 
         // Write setgroups deny (required before gid_map in some cases)
@@ -170,7 +171,8 @@ impl NamespaceManager {
                 .write(true)
                 .open(&setgroups_path)
                 .map_err(|e| RuneError::Runtime(format!("Failed to open setgroups: {}", e)))?;
-            setgroups_file.write_all(b"deny")
+            setgroups_file
+                .write_all(b"deny")
                 .map_err(|e| RuneError::Runtime(format!("Failed to write setgroups: {}", e)))?;
         }
 
@@ -180,7 +182,8 @@ impl NamespaceManager {
             .write(true)
             .open(&gid_map_path)
             .map_err(|e| RuneError::Runtime(format!("Failed to open gid_map: {}", e)))?;
-        gid_file.write_all(gid_map.as_bytes())
+        gid_file
+            .write_all(gid_map.as_bytes())
             .map_err(|e| RuneError::Runtime(format!("Failed to write gid_map: {}", e)))?;
 
         Ok(())
@@ -248,7 +251,7 @@ mod tests {
         let manager = NamespaceManager::new("test-container");
         let namespaces = vec![NamespaceType::Pid, NamespaceType::Net, NamespaceType::Mount];
         let flags = manager.get_clone_flags(&namespaces);
-        
+
         assert!(flags & clone_flags::CLONE_NEWPID != 0);
         assert!(flags & clone_flags::CLONE_NEWNET != 0);
         assert!(flags & clone_flags::CLONE_NEWNS != 0);

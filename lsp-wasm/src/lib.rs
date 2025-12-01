@@ -45,5 +45,5 @@ pub mod server;
 // Re-export main types
 pub use completion::CompletionProvider;
 pub use hover::HoverProvider;
-pub use parser::{RunefileParser, types::*};
+pub use parser::{types::*, RunefileParser};
 pub use server::RunefileLspServer;

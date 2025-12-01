@@ -3,7 +3,7 @@
 //! Implements storage for the OCI registry using the filesystem.
 
 use crate::error::{Result, RuneError};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use std::path::PathBuf;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
@@ -40,14 +40,20 @@ impl RegistryStorage {
     /// Get manifest path
     fn manifest_path(&self, name: &str, reference: &str) -> PathBuf {
         let repo = self.repo_path(name);
-        
+
         // If reference is a digest, store in _manifests/revisions
         if reference.starts_with("sha256:") {
             let hash = reference.strip_prefix("sha256:").unwrap_or(reference);
-            repo.join("_manifests").join("revisions").join("sha256").join(hash)
+            repo.join("_manifests")
+                .join("revisions")
+                .join("sha256")
+                .join(hash)
         } else {
             // Tag reference
-            repo.join("_manifests").join("tags").join(reference).join("current")
+            repo.join("_manifests")
+                .join("tags")
+                .join(reference)
+                .join("current")
         }
     }
 
@@ -109,7 +115,9 @@ impl RegistryStorage {
 
                 if entry.file_type().await?.is_dir() {
                     let nested_prefix = format!("{}/{}", prefix, name_str);
-                    let nested = self.list_nested_repos(&entry.path(), &nested_prefix).await?;
+                    let nested = self
+                        .list_nested_repos(&entry.path(), &nested_prefix)
+                        .await?;
                     repos.extend(nested);
                 }
             }
@@ -144,7 +152,8 @@ impl RegistryStorage {
         &'a self,
         name: &'a str,
         reference: &'a str,
-    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(String, u64)>> + Send + 'a>> {
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(String, u64)>> + Send + 'a>>
+    {
         Box::pin(async move {
             let path = self.manifest_path(name, reference);
 
@@ -165,7 +174,8 @@ impl RegistryStorage {
                 "application/vnd.oci.image.manifest.v1+json".to_string()
             };
 
-            let metadata = fs::metadata(&path.join("data")).await
+            let metadata = fs::metadata(&path.join("data"))
+                .await
                 .or_else(|_| std::fs::metadata(&path))?;
 
             Ok((content_type, metadata.len()))
@@ -183,7 +193,10 @@ impl RegistryStorage {
             let link = path.join("link");
             if link.exists() {
                 let digest = fs::read_to_string(&link).await?;
-                let hash = digest.trim().strip_prefix("sha256:").unwrap_or(digest.trim());
+                let hash = digest
+                    .trim()
+                    .strip_prefix("sha256:")
+                    .unwrap_or(digest.trim());
                 self.repo_path(name)
                     .join("_manifests")
                     .join("revisions")
@@ -212,7 +225,13 @@ impl RegistryStorage {
     }
 
     /// Store manifest
-    pub async fn put_manifest(&self, name: &str, reference: &str, content_type: &str, body: &[u8]) -> Result<String> {
+    pub async fn put_manifest(
+        &self,
+        name: &str,
+        reference: &str,
+        content_type: &str,
+        body: &[u8],
+    ) -> Result<String> {
         // Calculate digest
         let mut hasher = Sha256::new();
         hasher.update(body);
@@ -226,19 +245,33 @@ impl RegistryStorage {
 
         // Store by digest
         let hash_str = format!("{:x}", hash);
-        let revision_path = repo.join("_manifests").join("revisions").join("sha256").join(&hash_str);
+        let revision_path = repo
+            .join("_manifests")
+            .join("revisions")
+            .join("sha256")
+            .join(&hash_str);
         fs::create_dir_all(&revision_path).await?;
         fs::write(revision_path.join("data"), body).await?;
         fs::write(revision_path.join("content-type"), content_type).await?;
 
         // If reference is a tag, create link
         if !reference.starts_with("sha256:") {
-            let tag_path = repo.join("_manifests").join("tags").join(reference).join("current");
+            let tag_path = repo
+                .join("_manifests")
+                .join("tags")
+                .join(reference)
+                .join("current");
             fs::create_dir_all(&tag_path).await?;
             fs::write(tag_path.join("link"), &digest).await?;
 
             // Also store in index
-            let index_path = repo.join("_manifests").join("tags").join(reference).join("index").join("sha256").join(&hash_str);
+            let index_path = repo
+                .join("_manifests")
+                .join("tags")
+                .join(reference)
+                .join("index")
+                .join("sha256")
+                .join(&hash_str);
             fs::create_dir_all(&index_path).await?;
             fs::write(index_path.join("link"), &digest).await?;
         }
@@ -258,7 +291,8 @@ impl RegistryStorage {
         // If it's a digest, delete the revision
         if reference.starts_with("sha256:") {
             let hash = reference.strip_prefix("sha256:").unwrap_or(reference);
-            let revision_path = self.repo_path(name)
+            let revision_path = self
+                .repo_path(name)
                 .join("_manifests")
                 .join("revisions")
                 .join("sha256")
@@ -284,7 +318,8 @@ impl RegistryStorage {
     /// Get blob size
     pub async fn get_blob_size(&self, _name: &str, digest: &str) -> Result<u64> {
         let path = self.blob_path(digest);
-        let metadata = fs::metadata(&path).await
+        let metadata = fs::metadata(&path)
+            .await
             .map_err(|_| RuneError::ImageNotFound(digest.to_string()))?;
         Ok(metadata.len())
     }
@@ -292,14 +327,16 @@ impl RegistryStorage {
     /// Get blob content
     pub async fn get_blob(&self, _name: &str, digest: &str) -> Result<Vec<u8>> {
         let path = self.blob_path(digest);
-        fs::read(&path).await
+        fs::read(&path)
+            .await
             .map_err(|_| RuneError::ImageNotFound(digest.to_string()))
     }
 
     /// Delete blob
     pub async fn delete_blob(&self, _name: &str, digest: &str) -> Result<()> {
         let path = self.blob_path(digest);
-        fs::remove_file(&path).await
+        fs::remove_file(&path)
+            .await
             .map_err(|_| RuneError::ImageNotFound(digest.to_string()))
     }
 
@@ -335,11 +372,17 @@ impl RegistryStorage {
     }
 
     /// Complete upload and move to blobs
-    pub async fn complete_upload(&self, _name: &str, uuid: &str, expected_digest: &str) -> Result<String> {
+    pub async fn complete_upload(
+        &self,
+        _name: &str,
+        uuid: &str,
+        expected_digest: &str,
+    ) -> Result<String> {
         let upload_path = self.upload_path(uuid).join("data");
 
         // Read and hash the content
-        let content = fs::read(&upload_path).await
+        let content = fs::read(&upload_path)
+            .await
             .map_err(|_| RuneError::Internal(format!("Upload {} not found", uuid)))?;
 
         let mut hasher = Sha256::new();
@@ -390,7 +433,9 @@ impl RegistryStorage {
             for tag in tags {
                 if let Ok((_, content)) = self.get_manifest(&repo, &tag).await {
                     // Parse manifest and collect referenced blobs
-                    if let Ok(manifest) = serde_json::from_slice::<super::server::ImageManifest>(&content) {
+                    if let Ok(manifest) =
+                        serde_json::from_slice::<super::server::ImageManifest>(&content)
+                    {
                         referenced.insert(manifest.config.digest.clone());
                         for layer in manifest.layers {
                             referenced.insert(layer.digest.clone());
@@ -443,13 +488,16 @@ mod tests {
         let storage = RegistryStorage::new(temp.path().to_path_buf()).unwrap();
 
         let manifest = r#"{"schemaVersion":2,"config":{"mediaType":"test","digest":"sha256:abc","size":0},"layers":[]}"#;
-        
-        let digest = storage.put_manifest(
-            "test/repo",
-            "latest",
-            "application/vnd.oci.image.manifest.v1+json",
-            manifest.as_bytes()
-        ).await.unwrap();
+
+        let digest = storage
+            .put_manifest(
+                "test/repo",
+                "latest",
+                "application/vnd.oci.image.manifest.v1+json",
+                manifest.as_bytes(),
+            )
+            .await
+            .unwrap();
 
         assert!(digest.starts_with("sha256:"));
 
@@ -474,7 +522,10 @@ mod tests {
         hasher.update(data);
         let expected = format!("sha256:{:x}", hasher.finalize());
 
-        let digest = storage.complete_upload("test/repo", uuid, &expected).await.unwrap();
+        let digest = storage
+            .complete_upload("test/repo", uuid, &expected)
+            .await
+            .unwrap();
         assert_eq!(digest, expected);
 
         // Verify blob exists

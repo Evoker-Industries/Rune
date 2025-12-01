@@ -19,7 +19,7 @@ impl HoverProvider {
     #[wasm_bindgen(js_name = getHover)]
     pub fn get_hover(&self, content: &str, line: u32, character: u32) -> String {
         let lines: Vec<&str> = content.lines().collect();
-        
+
         if (line as usize) >= lines.len() {
             return "null".to_string();
         }
@@ -34,7 +34,7 @@ impl HoverProvider {
 
         // Get the word at cursor position
         let word = self.get_word_at_position(current_line, character as usize);
-        
+
         // Check if it's an instruction keyword
         let parts: Vec<&str> = trimmed.splitn(2, char::is_whitespace).collect();
         let instruction = parts.get(0).unwrap_or(&"").to_uppercase();
@@ -45,7 +45,10 @@ impl HoverProvider {
                 contents: doc,
                 range: Some(Range {
                     start: Position { line, character: 0 },
-                    end: Position { line, character: instruction.len() as u32 },
+                    end: Position {
+                        line,
+                        character: instruction.len() as u32,
+                    },
                 }),
             };
             return serde_json::to_string(&result).unwrap_or_else(|_| "null".to_string());
@@ -85,7 +88,8 @@ impl HoverProvider {
 
     fn get_instruction_documentation(&self, instruction: &str) -> Option<String> {
         let doc = match instruction {
-            "FROM" => r#"# FROM
+            "FROM" => {
+                r#"# FROM
 
 Sets the base image for subsequent instructions.
 
@@ -104,9 +108,11 @@ FROM scratch
 **Notes:**
 - Must be the first instruction (except ARG)
 - Can appear multiple times for multi-stage builds
-- Use `scratch` for minimal images"#,
+- Use `scratch` for minimal images"#
+            }
 
-            "RUN" => r#"# RUN
+            "RUN" => {
+                r#"# RUN
 
 Executes commands in a new layer on top of the current image.
 
@@ -125,9 +131,11 @@ RUN ["pip", "install", "flask"]
 **Best Practices:**
 - Combine related commands with `&&`
 - Clean up in the same layer to reduce image size
-- Use exec form for better signal handling"#,
+- Use exec form for better signal handling"#
+            }
 
-            "COPY" => r#"# COPY
+            "COPY" => {
+                r#"# COPY
 
 Copies files/directories from build context to the image.
 
@@ -147,9 +155,11 @@ COPY --chown=node:node package*.json ./
 **Notes:**
 - Use `--from` for multi-stage builds
 - Wildcards are supported
-- Preserves file permissions"#,
+- Preserves file permissions"#
+            }
 
-            "ADD" => r#"# ADD
+            "ADD" => {
+                r#"# ADD
 
 Similar to COPY but with additional features.
 
@@ -163,9 +173,11 @@ ADD [--chown=<user>:<group>] <src>... <dest>
 - Can fetch remote URLs
 - Supports `--checksum` for verification
 
-**Note:** Prefer COPY unless you need ADD's features"#,
+**Note:** Prefer COPY unless you need ADD's features"#
+            }
 
-            "CMD" => r#"# CMD
+            "CMD" => {
+                r#"# CMD
 
 Provides default command for container execution.
 
@@ -179,9 +191,11 @@ CMD ["param1","param2"]        # Default params for ENTRYPOINT
 **Notes:**
 - Only one CMD per Dockerfile (last one wins)
 - Can be overridden at runtime
-- Use exec form for proper signal handling"#,
+- Use exec form for proper signal handling"#
+            }
 
-            "ENTRYPOINT" => r#"# ENTRYPOINT
+            "ENTRYPOINT" => {
+                r#"# ENTRYPOINT
 
 Configures the container to run as an executable.
 
@@ -199,9 +213,11 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 
 **Notes:**
 - Use with CMD for default arguments
-- Exec form recommended for signal handling"#,
+- Exec form recommended for signal handling"#
+            }
 
-            "ENV" => r#"# ENV
+            "ENV" => {
+                r#"# ENV
 
 Sets environment variables.
 
@@ -220,9 +236,11 @@ ENV MY_VAR=value OTHER_VAR=other
 
 **Notes:**
 - Available during build and at runtime
-- Can be overridden with `docker run -e`"#,
+- Can be overridden with `docker run -e`"#
+            }
 
-            "EXPOSE" => r#"# EXPOSE
+            "EXPOSE" => {
+                r#"# EXPOSE
 
 Documents which ports the container listens on.
 
@@ -238,9 +256,11 @@ EXPOSE 443/tcp
 EXPOSE 8080/udp
 ```
 
-**Note:** This is documentation only; use `-p` to publish ports"#,
+**Note:** This is documentation only; use `-p` to publish ports"#
+            }
 
-            "WORKDIR" => r#"# WORKDIR
+            "WORKDIR" => {
+                r#"# WORKDIR
 
 Sets the working directory for subsequent instructions.
 
@@ -258,9 +278,11 @@ WORKDIR /src/myapp
 **Notes:**
 - Creates directory if it doesn't exist
 - Can use environment variables
-- Relative paths are relative to previous WORKDIR"#,
+- Relative paths are relative to previous WORKDIR"#
+            }
 
-            "USER" => r#"# USER
+            "USER" => {
+                r#"# USER
 
 Sets the user for subsequent instructions and container runtime.
 
@@ -276,9 +298,11 @@ USER node
 USER 1000:1000
 ```
 
-**Best Practice:** Run as non-root for security"#,
+**Best Practice:** Run as non-root for security"#
+            }
 
-            "VOLUME" => r#"# VOLUME
+            "VOLUME" => {
+                r#"# VOLUME
 
 Creates a mount point for externally mounted volumes.
 
@@ -290,9 +314,11 @@ VOLUME /var/log /var/db
 
 **Notes:**
 - Data persists beyond container lifecycle
-- Cannot specify host directory in Dockerfile"#,
+- Cannot specify host directory in Dockerfile"#
+            }
 
-            "ARG" => r#"# ARG
+            "ARG" => {
+                r#"# ARG
 
 Defines a build-time variable.
 
@@ -312,9 +338,11 @@ ARG BUILD_DATE
 docker build --build-arg VERSION=1.0 .
 ```
 
-**Note:** ARG values don't persist in the final image"#,
+**Note:** ARG values don't persist in the final image"#
+            }
 
-            "LABEL" => r#"# LABEL
+            "LABEL" => {
+                r#"# LABEL
 
 Adds metadata to an image.
 
@@ -328,9 +356,11 @@ LABEL <key>=<value> <key>=<value> ...
 LABEL version="1.0"
 LABEL maintainer="team@example.com"
 LABEL org.opencontainers.image.source="https://github.com/..."
-```"#,
+```"#
+            }
 
-            "HEALTHCHECK" => r#"# HEALTHCHECK
+            "HEALTHCHECK" => {
+                r#"# HEALTHCHECK
 
 Tells Docker how to test if the container is still healthy.
 
@@ -349,9 +379,11 @@ HEALTHCHECK NONE
 **Example:**
 ```dockerfile
 HEALTHCHECK --interval=30s CMD curl -f http://localhost/ || exit 1
-```"#,
+```"#
+            }
 
-            "SHELL" => r#"# SHELL
+            "SHELL" => {
+                r#"# SHELL
 
 Sets the default shell for shell-form commands.
 
@@ -366,9 +398,11 @@ SHELL ["/bin/bash", "-c"]
 SHELL ["powershell", "-Command"]
 ```
 
-**Note:** Affects RUN, CMD, and ENTRYPOINT shell forms"#,
+**Note:** Affects RUN, CMD, and ENTRYPOINT shell forms"#
+            }
 
-            "STOPSIGNAL" => r#"# STOPSIGNAL
+            "STOPSIGNAL" => {
+                r#"# STOPSIGNAL
 
 Sets the signal to stop the container.
 
@@ -382,7 +416,8 @@ STOPSIGNAL signal
 STOPSIGNAL SIGTERM
 STOPSIGNAL SIGKILL
 STOPSIGNAL 9
-```"#,
+```"#
+            }
 
             _ => return None,
         };

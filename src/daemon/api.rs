@@ -3,11 +3,11 @@
 //! Implements Docker Engine API v1.24+ compatible endpoints.
 //! This API is compatible with Portainer and other Docker management tools.
 
-use std::sync::Arc;
-use crate::container::{ContainerManager, ContainerConfig};
+use crate::container::{ContainerConfig, ContainerManager};
 use crate::error::{Result, RuneError};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use std::sync::Arc;
 use tracing::debug;
 
 /// API request/response structures
@@ -502,7 +502,7 @@ pub struct ApiHandler {
 impl ApiHandler {
     /// Create a new API handler
     pub fn new(container_manager: Arc<ContainerManager>) -> Self {
-        Self { 
+        Self {
             container_manager,
             exec_instances: Arc::new(std::sync::RwLock::new(std::collections::HashMap::new())),
         }
@@ -516,7 +516,7 @@ impl ApiHandler {
         // Strip version prefix and query string for matching
         let path_clean = path.split('?').next().unwrap_or(path);
         let path_parts: Vec<&str> = path_clean.trim_start_matches('/').split('/').collect();
-        
+
         // Skip version prefix if present (e.g., v1.24, v1.43)
         let parts = if !path_parts.is_empty() && path_parts[0].starts_with("v1.") {
             &path_parts[1..]
@@ -554,7 +554,9 @@ impl ApiHandler {
             ("POST", ["containers", "prune"]) => self.prune_containers(path),
             // Attach and console endpoints
             ("POST", ["containers", id, "attach"]) => self.attach_container(id, path),
-            ("GET", ["containers", id, "attach", "ws"]) => self.attach_container_websocket(id, path),
+            ("GET", ["containers", id, "attach", "ws"]) => {
+                self.attach_container_websocket(id, path)
+            }
             ("POST", ["containers", id, "resize"]) => self.resize_container_tty(id, path),
 
             // Images - required for Portainer
@@ -642,7 +644,10 @@ impl ApiHandler {
             ("GET", ["distribution", image, "json"]) => self.get_distribution_info(image),
 
             // Default
-            _ => Err(RuneError::Api(format!("Unknown endpoint: {} {}", method, path))),
+            _ => Err(RuneError::Api(format!(
+                "Unknown endpoint: {} {}",
+                method, path
+            ))),
         }
     }
 
@@ -664,18 +669,25 @@ impl ApiHandler {
     }
 
     fn get_info(&self) -> Result<String> {
-        let containers = self.container_manager.count()
+        let containers = self
+            .container_manager
+            .count()
             .map_err(|e| tracing::warn!("Failed to count containers: {}", e))
             .unwrap_or(0) as i64;
-        let running = self.container_manager.running_count()
+        let running = self
+            .container_manager
+            .running_count()
             .map_err(|e| tracing::warn!("Failed to count running containers: {}", e))
             .unwrap_or(0) as i64;
 
         let mut runtimes = std::collections::HashMap::new();
-        runtimes.insert("rune".to_string(), RuntimeInfo {
-            path: "/usr/bin/rune".to_string(),
-            runtime_args: None,
-        });
+        runtimes.insert(
+            "rune".to_string(),
+            RuntimeInfo {
+                path: "/usr/bin/rune".to_string(),
+                runtime_args: None,
+            },
+        );
 
         let response = InfoResponse {
             id: uuid::Uuid::new_v4().to_string(),
@@ -706,12 +718,15 @@ impl ApiHandler {
                 ..Default::default()
             },
             runtimes,
-            security_options: vec![
-                "name=seccomp,profile=default".to_string(),
-            ],
+            security_options: vec!["name=seccomp,profile=default".to_string()],
             plugins: PluginsInfo {
                 volume: vec!["local".to_string()],
-                network: vec!["bridge".to_string(), "host".to_string(), "overlay".to_string(), "null".to_string()],
+                network: vec![
+                    "bridge".to_string(),
+                    "host".to_string(),
+                    "overlay".to_string(),
+                    "null".to_string(),
+                ],
                 authorization: None,
                 log: vec!["json-file".to_string(), "local".to_string()],
             },
@@ -728,25 +743,37 @@ impl ApiHandler {
     fn list_containers(&self, path: &str) -> Result<String> {
         let all = path.contains("all=true") || path.contains("all=1");
         let containers = self.container_manager.list(all)?;
-        
+
         // Parse label filter if present
-        let label_filter: Option<Vec<(String, Option<String>)>> = if let Some(pos) = path.find("filters=") {
-            let start = pos + 8;
-            let end = path[start..].find('&').map(|i| start + i).unwrap_or(path.len());
-            let filter_str = &path[start..end];
-            // URL decode and parse JSON filter
-            if let Ok(decoded) = urlencoding_decode(filter_str) {
-                if let Ok(filters) = serde_json::from_str::<Value>(&decoded) {
-                    if let Some(labels) = filters.get("label").and_then(|v| v.as_array()) {
-                        Some(labels.iter().filter_map(|l| {
-                            l.as_str().map(|s| {
-                                if let Some((k, v)) = s.split_once('=') {
-                                    (k.to_string(), Some(v.to_string()))
-                                } else {
-                                    (s.to_string(), None)
-                                }
-                            })
-                        }).collect())
+        let label_filter: Option<Vec<(String, Option<String>)>> =
+            if let Some(pos) = path.find("filters=") {
+                let start = pos + 8;
+                let end = path[start..]
+                    .find('&')
+                    .map(|i| start + i)
+                    .unwrap_or(path.len());
+                let filter_str = &path[start..end];
+                // URL decode and parse JSON filter
+                if let Ok(decoded) = urlencoding_decode(filter_str) {
+                    if let Ok(filters) = serde_json::from_str::<Value>(&decoded) {
+                        if let Some(labels) = filters.get("label").and_then(|v| v.as_array()) {
+                            Some(
+                                labels
+                                    .iter()
+                                    .filter_map(|l| {
+                                        l.as_str().map(|s| {
+                                            if let Some((k, v)) = s.split_once('=') {
+                                                (k.to_string(), Some(v.to_string()))
+                                            } else {
+                                                (s.to_string(), None)
+                                            }
+                                        })
+                                    })
+                                    .collect(),
+                            )
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     }
@@ -755,11 +782,8 @@ impl ApiHandler {
                 }
             } else {
                 None
-            }
-        } else {
-            None
-        };
-        
+            };
+
         let response: Vec<ContainerListItem> = containers
             .iter()
             .filter(|c| {
@@ -781,8 +805,10 @@ impl ApiHandler {
             })
             .map(|c| {
                 // Convert ports to PortInfo
-                let ports: Vec<PortInfo> = c.exposed_ports.iter().map(|p| {
-                    PortInfo {
+                let ports: Vec<PortInfo> = c
+                    .exposed_ports
+                    .iter()
+                    .map(|p| PortInfo {
                         ip: Some("0.0.0.0".to_string()),
                         private_port: p.container_port,
                         public_port: Some(p.host_port),
@@ -790,12 +816,14 @@ impl ApiHandler {
                             crate::container::Protocol::Tcp => "tcp".to_string(),
                             crate::container::Protocol::Udp => "udp".to_string(),
                         },
-                    }
-                }).collect();
+                    })
+                    .collect();
 
                 // Convert volumes to mounts
-                let mounts: Vec<MountPoint> = c.volumes.iter().map(|v| {
-                    MountPoint {
+                let mounts: Vec<MountPoint> = c
+                    .volumes
+                    .iter()
+                    .map(|v| MountPoint {
                         mount_type: "bind".to_string(),
                         name: None,
                         source: v.host_path.clone(),
@@ -804,19 +832,22 @@ impl ApiHandler {
                         mode: if v.read_only { "ro" } else { "rw" }.to_string(),
                         rw: !v.read_only,
                         propagation: "rprivate".to_string(),
-                    }
-                }).collect();
+                    })
+                    .collect();
 
                 // Build network settings
                 let mut networks = std::collections::HashMap::new();
-                networks.insert(c.network_mode.clone(), EndpointSettings {
-                    network_id: c.network_mode.clone(),
-                    endpoint_id: format!("{}-ep", c.id),
-                    gateway: "172.17.0.1".to_string(),
-                    ip_address: "172.17.0.2".to_string(),
-                    ip_prefix_len: 16,
-                    ..Default::default()
-                });
+                networks.insert(
+                    c.network_mode.clone(),
+                    EndpointSettings {
+                        network_id: c.network_mode.clone(),
+                        endpoint_id: format!("{}-ep", c.id),
+                        gateway: "172.17.0.1".to_string(),
+                        ip_address: "172.17.0.2".to_string(),
+                        ip_prefix_len: 16,
+                        ..Default::default()
+                    },
+                );
 
                 ContainerListItem {
                     id: c.id.clone(),
@@ -841,7 +872,10 @@ impl ApiHandler {
     fn create_container(&self, body: &str, path: &str) -> Result<String> {
         let name = if let Some(pos) = path.find("name=") {
             let start = pos + 5;
-            let end = path[start..].find('&').map(|i| start + i).unwrap_or(path.len());
+            let end = path[start..]
+                .find('&')
+                .map(|i| start + i)
+                .unwrap_or(path.len());
             path[start..end].to_string()
         } else {
             format!("rune-{}", &uuid::Uuid::new_v4().to_string()[..8])
@@ -854,7 +888,7 @@ impl ApiHandler {
         if let Some(cmd) = request.cmd {
             config.cmd = cmd;
         }
-        
+
         // Set environment variables
         if let Some(env) = request.env {
             for e in env {
@@ -863,22 +897,22 @@ impl ApiHandler {
                 }
             }
         }
-        
+
         // Set labels
         if let Some(labels) = request.labels {
             config.labels = labels;
         }
-        
+
         // Set working directory
         if let Some(wd) = request.working_dir {
             config.working_dir = wd;
         }
-        
+
         // Set hostname
         if let Some(hostname) = request.hostname {
             config.hostname = hostname;
         }
-        
+
         // Set user
         if let Some(user) = request.user {
             config.user = user;
@@ -890,22 +924,22 @@ impl ApiHandler {
             if let Some(network_mode) = host_config.network_mode {
                 config.network_mode = network_mode;
             }
-            
+
             // Set privileged mode
             if let Some(privileged) = host_config.privileged {
                 config.privileged = privileged;
             }
-            
+
             // Set memory limit
             if let Some(memory) = host_config.memory {
                 config.resources.memory_limit = Some(memory as u64);
             }
-            
+
             // Set CPU shares
             if let Some(cpu_shares) = host_config.cpu_shares {
                 config.resources.cpu_shares = Some(cpu_shares as u64);
             }
-            
+
             // Set CPU period/quota
             if let Some(cpu_period) = host_config.cpu_period {
                 config.resources.cpu_period = Some(cpu_period as u64);
@@ -913,7 +947,7 @@ impl ApiHandler {
             if let Some(cpu_quota) = host_config.cpu_quota {
                 config.resources.cpu_quota = Some(cpu_quota);
             }
-            
+
             // Handle volume binds
             if let Some(binds) = host_config.binds {
                 for bind in binds {
@@ -927,7 +961,7 @@ impl ApiHandler {
                     }
                 }
             }
-            
+
             // Handle port bindings
             if let Some(port_bindings) = host_config.port_bindings {
                 for (container_port_str, bindings) in port_bindings {
@@ -953,7 +987,11 @@ impl ApiHandler {
             for (port_spec, _) in exposed_ports {
                 let (port, protocol) = parse_port_spec(&port_spec);
                 // Only add if not already bound
-                if !config.exposed_ports.iter().any(|p| p.container_port == port) {
+                if !config
+                    .exposed_ports
+                    .iter()
+                    .any(|p| p.container_port == port)
+                {
                     config.exposed_ports.push(crate::container::PortMapping {
                         host_port: port, // Default to same port
                         container_port: port,
@@ -964,7 +1002,10 @@ impl ApiHandler {
         }
 
         let id = self.container_manager.create(config)?;
-        let response = ContainerCreateResponse { id, warnings: vec![] };
+        let response = ContainerCreateResponse {
+            id,
+            warnings: vec![],
+        };
         Ok(serde_json::to_string(&response)?)
     }
 
@@ -972,24 +1013,29 @@ impl ApiHandler {
         let container = self.container_manager.get(id)?;
 
         // Convert environment variables to Docker format
-        let env: Vec<String> = container.env.iter()
+        let env: Vec<String> = container
+            .env
+            .iter()
             .map(|(k, v)| format!("{}={}", k, v))
             .collect();
 
         // Convert volumes to exposed volumes
-        let volumes: Option<std::collections::HashMap<String, Value>> = if container.volumes.is_empty() {
-            None
-        } else {
-            let mut vol_map = std::collections::HashMap::new();
-            for v in &container.volumes {
-                vol_map.insert(v.container_path.clone(), json!({}));
-            }
-            Some(vol_map)
-        };
+        let volumes: Option<std::collections::HashMap<String, Value>> =
+            if container.volumes.is_empty() {
+                None
+            } else {
+                let mut vol_map = std::collections::HashMap::new();
+                for v in &container.volumes {
+                    vol_map.insert(v.container_path.clone(), json!({}));
+                }
+                Some(vol_map)
+            };
 
         // Build mounts list
-        let mounts: Vec<MountPoint> = container.volumes.iter().map(|v| {
-            MountPoint {
+        let mounts: Vec<MountPoint> = container
+            .volumes
+            .iter()
+            .map(|v| MountPoint {
                 mount_type: "bind".to_string(),
                 name: None,
                 source: v.host_path.clone(),
@@ -998,89 +1044,101 @@ impl ApiHandler {
                 mode: if v.read_only { "ro" } else { "rw" }.to_string(),
                 rw: !v.read_only,
                 propagation: "rprivate".to_string(),
-            }
-        }).collect();
+            })
+            .collect();
 
         // Build exposed ports map
-        let exposed_ports: Option<std::collections::HashMap<String, Value>> = if container.exposed_ports.is_empty() {
-            None
-        } else {
-            let mut ports = std::collections::HashMap::new();
-            for p in &container.exposed_ports {
-                let protocol = match p.protocol {
-                    crate::container::Protocol::Tcp => "tcp",
-                    crate::container::Protocol::Udp => "udp",
-                };
-                ports.insert(format!("{}/{}", p.container_port, protocol), json!({}));
-            }
-            Some(ports)
-        };
+        let exposed_ports: Option<std::collections::HashMap<String, Value>> =
+            if container.exposed_ports.is_empty() {
+                None
+            } else {
+                let mut ports = std::collections::HashMap::new();
+                for p in &container.exposed_ports {
+                    let protocol = match p.protocol {
+                        crate::container::Protocol::Tcp => "tcp",
+                        crate::container::Protocol::Udp => "udp",
+                    };
+                    ports.insert(format!("{}/{}", p.container_port, protocol), json!({}));
+                }
+                Some(ports)
+            };
 
         // Build port bindings for host config
-        let port_bindings: Option<std::collections::HashMap<String, Vec<PortBinding>>> = if container.exposed_ports.is_empty() {
-            None
-        } else {
-            let mut bindings = std::collections::HashMap::new();
-            for p in &container.exposed_ports {
-                let protocol = match p.protocol {
-                    crate::container::Protocol::Tcp => "tcp",
-                    crate::container::Protocol::Udp => "udp",
-                };
-                bindings.insert(
-                    format!("{}/{}", p.container_port, protocol),
-                    vec![PortBinding {
-                        host_ip: Some("0.0.0.0".to_string()),
-                        host_port: Some(p.host_port.to_string()),
-                    }]
-                );
-            }
-            Some(bindings)
-        };
+        let port_bindings: Option<std::collections::HashMap<String, Vec<PortBinding>>> =
+            if container.exposed_ports.is_empty() {
+                None
+            } else {
+                let mut bindings = std::collections::HashMap::new();
+                for p in &container.exposed_ports {
+                    let protocol = match p.protocol {
+                        crate::container::Protocol::Tcp => "tcp",
+                        crate::container::Protocol::Udp => "udp",
+                    };
+                    bindings.insert(
+                        format!("{}/{}", p.container_port, protocol),
+                        vec![PortBinding {
+                            host_ip: Some("0.0.0.0".to_string()),
+                            host_port: Some(p.host_port.to_string()),
+                        }],
+                    );
+                }
+                Some(bindings)
+            };
 
         // Build network ports map
-        let ports: Option<std::collections::HashMap<String, Option<Vec<PortBinding>>>> = if container.exposed_ports.is_empty() {
-            None
-        } else {
-            let mut ports_map = std::collections::HashMap::new();
-            for p in &container.exposed_ports {
-                let protocol = match p.protocol {
-                    crate::container::Protocol::Tcp => "tcp",
-                    crate::container::Protocol::Udp => "udp",
-                };
-                ports_map.insert(
-                    format!("{}/{}", p.container_port, protocol),
-                    Some(vec![PortBinding {
-                        host_ip: Some("0.0.0.0".to_string()),
-                        host_port: Some(p.host_port.to_string()),
-                    }])
-                );
-            }
-            Some(ports_map)
-        };
+        let ports: Option<std::collections::HashMap<String, Option<Vec<PortBinding>>>> =
+            if container.exposed_ports.is_empty() {
+                None
+            } else {
+                let mut ports_map = std::collections::HashMap::new();
+                for p in &container.exposed_ports {
+                    let protocol = match p.protocol {
+                        crate::container::Protocol::Tcp => "tcp",
+                        crate::container::Protocol::Udp => "udp",
+                    };
+                    ports_map.insert(
+                        format!("{}/{}", p.container_port, protocol),
+                        Some(vec![PortBinding {
+                            host_ip: Some("0.0.0.0".to_string()),
+                            host_port: Some(p.host_port.to_string()),
+                        }]),
+                    );
+                }
+                Some(ports_map)
+            };
 
         // Build volume binds for host config
         let binds: Option<Vec<String>> = if container.volumes.is_empty() {
             None
         } else {
-            Some(container.volumes.iter().map(|v| {
-                if v.read_only {
-                    format!("{}:{}:ro", v.host_path, v.container_path)
-                } else {
-                    format!("{}:{}", v.host_path, v.container_path)
-                }
-            }).collect())
+            Some(
+                container
+                    .volumes
+                    .iter()
+                    .map(|v| {
+                        if v.read_only {
+                            format!("{}:{}:ro", v.host_path, v.container_path)
+                        } else {
+                            format!("{}:{}", v.host_path, v.container_path)
+                        }
+                    })
+                    .collect(),
+            )
         };
 
         // Build network settings
         let mut networks = std::collections::HashMap::new();
-        networks.insert(container.network_mode.clone(), EndpointSettings {
-            network_id: container.network_mode.clone(),
-            endpoint_id: format!("{}-ep", container.id),
-            gateway: "172.17.0.1".to_string(),
-            ip_address: "172.17.0.2".to_string(),
-            ip_prefix_len: 16,
-            ..Default::default()
-        });
+        networks.insert(
+            container.network_mode.clone(),
+            EndpointSettings {
+                network_id: container.network_mode.clone(),
+                endpoint_id: format!("{}-ep", container.id),
+                gateway: "172.17.0.1".to_string(),
+                ip_address: "172.17.0.2".to_string(),
+                ip_prefix_len: 16,
+                ..Default::default()
+            },
+        );
 
         let response = ContainerInspect {
             id: container.id.clone(),
@@ -1101,8 +1159,14 @@ impl ApiHandler {
                 pid: container.pid.unwrap_or(0) as i64,
                 exit_code: container.exit_code.unwrap_or(0),
                 error: "".to_string(),
-                started_at: container.started_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
-                finished_at: container.finished_at.map(|t| t.to_rfc3339()).unwrap_or_default(),
+                started_at: container
+                    .started_at
+                    .map(|t| t.to_rfc3339())
+                    .unwrap_or_default(),
+                finished_at: container
+                    .finished_at
+                    .map(|t| t.to_rfc3339())
+                    .unwrap_or_default(),
             },
             image: container.image.clone(),
             name: format!("/{}", container.name),
@@ -1255,7 +1319,8 @@ impl ApiHandler {
         Ok(json!({
             "Titles": ["UID", "PID", "PPID", "C", "STIME", "TTY", "TIME", "CMD"],
             "Processes": []
-        }).to_string())
+        })
+        .to_string())
     }
 
     fn container_stats(&self, _id: &str, _path: &str) -> Result<String> {
@@ -1338,7 +1403,8 @@ impl ApiHandler {
             "GraphDriver": {"Name": "overlay2", "Data": {}},
             "RootFS": {"Type": "layers", "Layers": []},
             "Metadata": {"LastTagTime": chrono::Utc::now().to_rfc3339()}
-        }).to_string())
+        })
+        .to_string())
     }
 
     fn image_history(&self, _id: &str) -> Result<String> {
@@ -1391,12 +1457,16 @@ impl ApiHandler {
             "Containers": {},
             "Options": {},
             "Labels": {}
-        }).to_string())
+        })
+        .to_string())
     }
 
     fn create_network(&self, body: &str) -> Result<String> {
         let request: Value = serde_json::from_str(body).unwrap_or(json!({}));
-        let _name = request.get("Name").and_then(|v| v.as_str()).unwrap_or("network");
+        let _name = request
+            .get("Name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("network");
         let id = format!("{:064x}", rand::random::<u64>());
         Ok(json!({"Id": id, "Warning": ""}).to_string())
     }
@@ -1432,13 +1502,16 @@ impl ApiHandler {
             "Labels": {},
             "Scope": "local",
             "Options": {}
-        }).to_string())
+        })
+        .to_string())
     }
 
     fn create_volume(&self, body: &str) -> Result<String> {
         let request: Value = serde_json::from_str(body).unwrap_or(json!({}));
         let default_name = uuid::Uuid::new_v4().to_string();
-        let name = request.get("Name").and_then(|v| v.as_str())
+        let name = request
+            .get("Name")
+            .and_then(|v| v.as_str())
             .unwrap_or(&default_name[..12]);
         Ok(json!({
             "Name": name,
@@ -1449,7 +1522,8 @@ impl ApiHandler {
             "Labels": {},
             "Scope": "local",
             "Options": {}
-        }).to_string())
+        })
+        .to_string())
     }
 
     fn remove_volume(&self, _name: &str, _path: &str) -> Result<String> {
@@ -1468,7 +1542,8 @@ impl ApiHandler {
             "Containers": [],
             "Volumes": [],
             "BuildCache": []
-        }).to_string())
+        })
+        .to_string())
     }
 
     fn auth(&self, _body: &str) -> Result<String> {
@@ -1479,7 +1554,7 @@ impl ApiHandler {
     fn create_exec(&self, container_id: &str, body: &str) -> Result<String> {
         // Verify container exists
         let _container = self.container_manager.get(container_id)?;
-        
+
         let request: ExecCreateRequest = serde_json::from_str(body).unwrap_or(ExecCreateRequest {
             attach_stdin: Some(false),
             attach_stdout: Some(true),
@@ -1492,9 +1567,9 @@ impl ApiHandler {
             user: None,
             working_dir: None,
         });
-        
+
         let exec_id = uuid::Uuid::new_v4().to_string();
-        
+
         // Store exec instance
         let instance = ExecInstance {
             id: exec_id.clone(),
@@ -1512,9 +1587,12 @@ impl ApiHandler {
             exit_code: None,
             pid: None,
         };
-        
-        self.exec_instances.write().unwrap().insert(exec_id.clone(), instance);
-        
+
+        self.exec_instances
+            .write()
+            .unwrap()
+            .insert(exec_id.clone(), instance);
+
         Ok(json!({"Id": exec_id}).to_string())
     }
 
@@ -1524,7 +1602,7 @@ impl ApiHandler {
             tty: Some(false),
             console_size: None,
         });
-        
+
         // Get and update exec instance
         let instance = {
             let mut instances = self.exec_instances.write().unwrap();
@@ -1533,22 +1611,25 @@ impl ApiHandler {
                 instance.pid = Some(std::process::id() as i64);
                 instance.clone()
             } else {
-                return Err(RuneError::Api(format!("No such exec instance: {}", exec_id)));
+                return Err(RuneError::Api(format!(
+                    "No such exec instance: {}",
+                    exec_id
+                )));
             }
         };
-        
+
         // In a real implementation, this would:
         // 1. Attach to the container's namespace
         // 2. Execute the command
         // 3. Stream I/O if not detached
-        
+
         if request.detach.unwrap_or(false) {
             // Detached mode - return immediately
             Ok("".to_string())
         } else {
             // Attached mode - in real implementation, stream data
             // For now, simulate command execution
-            
+
             // Mark as completed
             {
                 let mut instances = self.exec_instances.write().unwrap();
@@ -1557,14 +1638,14 @@ impl ApiHandler {
                     instance.exit_code = Some(0);
                 }
             }
-            
+
             Ok("".to_string())
         }
     }
 
     fn inspect_exec(&self, exec_id: &str) -> Result<String> {
         let instances = self.exec_instances.read().unwrap();
-        
+
         if let Some(instance) = instances.get(exec_id) {
             let response = ExecInspectResponse {
                 can_remove: !instance.running,
@@ -1610,7 +1691,8 @@ impl ApiHandler {
                 "ContainerID": "",
                 "DetachKeys": "",
                 "Pid": 0
-            }).to_string())
+            })
+            .to_string())
         }
     }
 
@@ -1618,10 +1700,10 @@ impl ApiHandler {
         // Parse height and width from query params
         let height = parse_query_param(path, "h").unwrap_or(24);
         let width = parse_query_param(path, "w").unwrap_or(80);
-        
+
         // In real implementation, this would resize the PTY
         debug!("Resize exec {} to {}x{}", exec_id, width, height);
-        
+
         Ok("".to_string())
     }
 
@@ -1629,11 +1711,11 @@ impl ApiHandler {
     fn attach_container(&self, container_id: &str, path: &str) -> Result<String> {
         // Verify container exists and is running
         let container = self.container_manager.get(container_id)?;
-        
+
         if !matches!(container.status, crate::container::ContainerStatus::Running) {
             return Err(RuneError::Api("Container is not running".to_string()));
         }
-        
+
         // Parse attach options from query string
         let _options = AttachOptions {
             stream: path.contains("stream=true") || path.contains("stream=1"),
@@ -1643,12 +1725,12 @@ impl ApiHandler {
             logs: path.contains("logs=true") || path.contains("logs=1"),
             detach_keys: parse_query_string(path, "detachKeys"),
         };
-        
+
         // In a real implementation, this would:
         // 1. Connect to the container's PTY/stdin/stdout/stderr
         // 2. Set up multiplexed streaming
         // 3. Handle detach keys
-        
+
         // For HTTP, we return success and the actual streaming would happen over the connection
         Ok("".to_string())
     }
@@ -1657,39 +1739,44 @@ impl ApiHandler {
         // WebSocket attach endpoint for console access
         // Verify container exists
         let container = self.container_manager.get(container_id)?;
-        
+
         if !matches!(container.status, crate::container::ContainerStatus::Running) {
             return Err(RuneError::Api("Container is not running".to_string()));
         }
-        
+
         // Parse options
         let _stdin = path.contains("stdin=true") || path.contains("stdin=1");
         let _stdout = path.contains("stdout=true") || path.contains("stdout=1");
         let _stderr = path.contains("stderr=true") || path.contains("stderr=1");
-        
+
         // In real implementation, this would upgrade to WebSocket
         // and provide bidirectional communication with the container
-        
+
         Ok("".to_string())
     }
 
     fn resize_container_tty(&self, container_id: &str, path: &str) -> Result<String> {
         // Verify container exists
         let _container = self.container_manager.get(container_id)?;
-        
+
         // Parse dimensions
         let height = parse_query_param(path, "h").unwrap_or(24);
         let width = parse_query_param(path, "w").unwrap_or(80);
-        
+
         // In real implementation, resize the container's TTY
-        debug!("Resize container {} TTY to {}x{}", container_id, width, height);
-        
+        debug!(
+            "Resize container {} TTY to {}x{}",
+            container_id, width, height
+        );
+
         Ok("".to_string())
     }
 
     // Swarm methods
     fn inspect_swarm(&self) -> Result<String> {
-        Err(RuneError::Api("This node is not a swarm manager".to_string()))
+        Err(RuneError::Api(
+            "This node is not a swarm manager".to_string(),
+        ))
     }
 
     fn init_swarm(&self, _body: &str) -> Result<String> {
@@ -1728,7 +1815,8 @@ impl ApiHandler {
             "Description": {"Hostname": gethostname::gethostname().to_string_lossy()},
             "Status": {"State": "ready", "Addr": "127.0.0.1"},
             "ManagerStatus": {"Leader": true, "Reachability": "reachable", "Addr": "127.0.0.1:2377"}
-        }).to_string())
+        })
+        .to_string())
     }
 
     fn remove_node(&self, _id: &str, _path: &str) -> Result<String> {
@@ -1752,7 +1840,8 @@ impl ApiHandler {
             "UpdatedAt": chrono::Utc::now().to_rfc3339(),
             "Spec": {"Name": id, "TaskTemplate": {}, "Mode": {"Replicated": {"Replicas": 1}}},
             "Endpoint": {"Spec": {}}
-        }).to_string())
+        })
+        .to_string())
     }
 
     fn create_service(&self, _body: &str) -> Result<String> {
@@ -1789,7 +1878,8 @@ impl ApiHandler {
             "NodeID": "",
             "Status": {"Timestamp": chrono::Utc::now().to_rfc3339(), "State": "running"},
             "DesiredState": "running"
-        }).to_string())
+        })
+        .to_string())
     }
 
     // Secret methods
@@ -1804,7 +1894,8 @@ impl ApiHandler {
             "CreatedAt": chrono::Utc::now().to_rfc3339(),
             "UpdatedAt": chrono::Utc::now().to_rfc3339(),
             "Spec": {"Name": id}
-        }).to_string())
+        })
+        .to_string())
     }
 
     fn create_secret(&self, _body: &str) -> Result<String> {
@@ -1832,7 +1923,8 @@ impl ApiHandler {
             "CreatedAt": chrono::Utc::now().to_rfc3339(),
             "UpdatedAt": chrono::Utc::now().to_rfc3339(),
             "Spec": {"Name": id}
-        }).to_string())
+        })
+        .to_string())
     }
 
     fn create_config(&self, _body: &str) -> Result<String> {
@@ -1861,7 +1953,8 @@ impl ApiHandler {
             "Settings": {"Mounts": [], "Env": [], "Args": [], "Devices": []},
             "PluginReference": "",
             "Config": {}
-        }).to_string())
+        })
+        .to_string())
     }
 
     // Distribution methods
@@ -1873,7 +1966,8 @@ impl ApiHandler {
                 "size": 0
             },
             "Platforms": [{"architecture": std::env::consts::ARCH, "os": "linux"}]
-        }).to_string())
+        })
+        .to_string())
     }
 }
 
@@ -1898,7 +1992,8 @@ fn get_total_memory() -> i64 {
         std::fs::read_to_string("/proc/meminfo")
             .ok()
             .and_then(|content| {
-                content.lines()
+                content
+                    .lines()
                     .find(|line| line.starts_with("MemTotal:"))
                     .and_then(|line| {
                         line.split_whitespace()
@@ -1921,9 +2016,14 @@ fn get_os_name() -> String {
         std::fs::read_to_string("/etc/os-release")
             .ok()
             .and_then(|content| {
-                content.lines()
+                content
+                    .lines()
                     .find(|line| line.starts_with("PRETTY_NAME="))
-                    .map(|line| line.trim_start_matches("PRETTY_NAME=").trim_matches('"').to_string())
+                    .map(|line| {
+                        line.trim_start_matches("PRETTY_NAME=")
+                            .trim_matches('"')
+                            .to_string()
+                    })
             })
             .unwrap_or_else(|| "Linux".to_string())
     }
@@ -1937,7 +2037,7 @@ fn get_os_name() -> String {
 fn urlencoding_decode(input: &str) -> std::result::Result<String, ()> {
     let mut result = String::with_capacity(input.len());
     let mut chars = input.chars().peekable();
-    
+
     while let Some(c) = chars.next() {
         if c == '%' {
             let hex: String = chars.by_ref().take(2).collect();
@@ -1956,18 +2056,26 @@ fn urlencoding_decode(input: &str) -> std::result::Result<String, ()> {
             result.push(c);
         }
     }
-    
+
     Ok(result)
 }
 
 /// Parse port specification (e.g., "80/tcp" -> (80, Protocol::Tcp))
 fn parse_port_spec(spec: &str) -> (u16, crate::container::Protocol) {
     let parts: Vec<&str> = spec.split('/').collect();
-    let port = parts.first()
+    let port = parts
+        .first()
         .and_then(|p| p.parse::<u16>().ok())
         .unwrap_or(0);
-    let protocol = parts.get(1)
-        .map(|p| if *p == "udp" { crate::container::Protocol::Udp } else { crate::container::Protocol::Tcp })
+    let protocol = parts
+        .get(1)
+        .map(|p| {
+            if *p == "udp" {
+                crate::container::Protocol::Udp
+            } else {
+                crate::container::Protocol::Tcp
+            }
+        })
         .unwrap_or(crate::container::Protocol::Tcp);
     (port, protocol)
 }
@@ -1979,7 +2087,7 @@ fn format_container_status(
     finished_at: Option<chrono::DateTime<chrono::Utc>>,
 ) -> String {
     use crate::container::ContainerStatus;
-    
+
     match status {
         ContainerStatus::Running => {
             if let Some(started) = started_at {

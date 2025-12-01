@@ -135,24 +135,36 @@ impl RegistryAuth {
     }
 
     /// Add a user
-    pub fn add_user(&self, username: &str, password: &str, permissions: Vec<Permission>) -> Result<()> {
-        let mut users = self.users.write()
+    pub fn add_user(
+        &self,
+        username: &str,
+        password: &str,
+        permissions: Vec<Permission>,
+    ) -> Result<()> {
+        let mut users = self
+            .users
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
         let password_hash = hash_password(password);
 
-        users.insert(username.to_string(), User {
-            username: username.to_string(),
-            password_hash,
-            permissions,
-        });
+        users.insert(
+            username.to_string(),
+            User {
+                username: username.to_string(),
+                password_hash,
+                permissions,
+            },
+        );
 
         Ok(())
     }
 
     /// Remove a user
     pub fn remove_user(&self, username: &str) -> Result<()> {
-        let mut users = self.users.write()
+        let mut users = self
+            .users
+            .write()
             .map_err(|_| RuneError::Lock("Failed to acquire write lock".to_string()))?;
 
         users.remove(username);
@@ -161,7 +173,9 @@ impl RegistryAuth {
 
     /// Verify credentials
     pub fn verify_credentials(&self, username: &str, password: &str) -> Result<bool> {
-        let users = self.users.read()
+        let users = self
+            .users
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         if let Some(user) = users.get(username) {
@@ -173,12 +187,16 @@ impl RegistryAuth {
 
     /// Check if action is allowed
     pub fn is_allowed(&self, username: &str, repository: &str, action: Action) -> Result<bool> {
-        let users = self.users.read()
+        let users = self
+            .users
+            .read()
             .map_err(|_| RuneError::Lock("Failed to acquire read lock".to_string()))?;
 
         if let Some(user) = users.get(username) {
             for perm in &user.permissions {
-                if matches_repository(&perm.repository, repository) && perm.actions.contains(&action) {
+                if matches_repository(&perm.repository, repository)
+                    && perm.actions.contains(&action)
+                {
                     return Ok(true);
                 }
             }
@@ -234,7 +252,9 @@ impl RegistryAuth {
         }
 
         if claim.nbf > now {
-            return Err(RuneError::PermissionDenied("Token not yet valid".to_string()));
+            return Err(RuneError::PermissionDenied(
+                "Token not yet valid".to_string(),
+            ));
         }
 
         Ok(claim)
@@ -244,8 +264,7 @@ impl RegistryAuth {
     pub fn www_authenticate(&self, scope: Option<&str>) -> String {
         let mut header = format!(
             r#"Bearer realm="{}",service="{}""#,
-            self.config.realm,
-            self.config.service
+            self.config.realm, self.config.service
         );
 
         if let Some(s) = scope {
@@ -302,14 +321,13 @@ fn matches_repository(pattern: &str, repository: &str) -> bool {
 /// Hash password using bcrypt for secure storage
 fn hash_password(password: &str) -> String {
     // Use bcrypt with default cost factor (12)
-    bcrypt::hash(password, bcrypt::DEFAULT_COST)
-        .unwrap_or_else(|_| {
-            // Fallback to SHA-256 if bcrypt fails (should not happen)
-            use sha2::{Sha256, Digest};
-            let mut hasher = Sha256::new();
-            hasher.update(password.as_bytes());
-            format!("{:x}", hasher.finalize())
-        })
+    bcrypt::hash(password, bcrypt::DEFAULT_COST).unwrap_or_else(|_| {
+        // Fallback to SHA-256 if bcrypt fails (should not happen)
+        use sha2::{Digest, Sha256};
+        let mut hasher = Sha256::new();
+        hasher.update(password.as_bytes());
+        format!("{:x}", hasher.finalize())
+    })
 }
 
 /// Verify password against bcrypt hash
@@ -319,17 +337,17 @@ fn verify_password(password: &str, hash: &str) -> bool {
 
 /// Base64 encode
 fn base64_encode(data: &str) -> String {
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
     STANDARD.encode(data.as_bytes())
 }
 
 /// Base64 decode
 fn base64_decode(data: &str) -> Result<String> {
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
-    let bytes = STANDARD.decode(data)
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    let bytes = STANDARD
+        .decode(data)
         .map_err(|e| RuneError::InvalidConfig(format!("Invalid base64: {}", e)))?;
-    String::from_utf8(bytes)
-        .map_err(|e| RuneError::InvalidConfig(format!("Invalid UTF-8: {}", e)))
+    String::from_utf8(bytes).map_err(|e| RuneError::InvalidConfig(format!("Invalid UTF-8: {}", e)))
 }
 
 #[cfg(test)]
@@ -340,12 +358,15 @@ mod tests {
     fn test_add_and_verify_user() {
         let auth = RegistryAuth::new();
 
-        auth.add_user("testuser", "testpass", vec![
-            Permission {
+        auth.add_user(
+            "testuser",
+            "testpass",
+            vec![Permission {
                 repository: "*".to_string(),
                 actions: vec![Action::Pull, Action::Push],
-            },
-        ]).unwrap();
+            }],
+        )
+        .unwrap();
 
         assert!(auth.verify_credentials("testuser", "testpass").unwrap());
         assert!(!auth.verify_credentials("testuser", "wrongpass").unwrap());
@@ -355,16 +376,25 @@ mod tests {
     fn test_permission_check() {
         let auth = RegistryAuth::new();
 
-        auth.add_user("testuser", "testpass", vec![
-            Permission {
+        auth.add_user(
+            "testuser",
+            "testpass",
+            vec![Permission {
                 repository: "library/*".to_string(),
                 actions: vec![Action::Pull],
-            },
-        ]).unwrap();
+            }],
+        )
+        .unwrap();
 
-        assert!(auth.is_allowed("testuser", "library/nginx", Action::Pull).unwrap());
-        assert!(!auth.is_allowed("testuser", "library/nginx", Action::Push).unwrap());
-        assert!(!auth.is_allowed("testuser", "private/repo", Action::Pull).unwrap());
+        assert!(auth
+            .is_allowed("testuser", "library/nginx", Action::Pull)
+            .unwrap());
+        assert!(!auth
+            .is_allowed("testuser", "library/nginx", Action::Push)
+            .unwrap());
+        assert!(!auth
+            .is_allowed("testuser", "private/repo", Action::Pull)
+            .unwrap());
     }
 
     #[test]
@@ -373,7 +403,9 @@ mod tests {
 
         auth.add_user("testuser", "testpass", vec![]).unwrap();
 
-        let token = auth.generate_token("testuser", "repository:library/nginx:pull").unwrap();
+        let token = auth
+            .generate_token("testuser", "repository:library/nginx:pull")
+            .unwrap();
         assert!(!token.token.is_empty());
 
         let claim = auth.verify_token(&token.token).unwrap();

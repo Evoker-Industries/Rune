@@ -7,6 +7,8 @@ pub mod config;
 pub mod lifecycle;
 pub mod runtime;
 
-pub use config::{ContainerConfig, ContainerStatus, PortMapping, VolumeMount, Protocol, ResourceLimits};
+pub use config::{
+    ContainerConfig, ContainerStatus, PortMapping, Protocol, ResourceLimits, VolumeMount,
+};
 pub use lifecycle::ContainerManager;
 pub use runtime::Container;

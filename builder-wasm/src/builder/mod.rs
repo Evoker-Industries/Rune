@@ -47,9 +47,14 @@ impl WasmBuilder {
         let content = match self.fs.read_file_impl(path) {
             Some(bytes) => match String::from_utf8(bytes) {
                 Ok(s) => s,
-                Err(_) => return serde_json::json!({ "error": "Invalid UTF-8 in file" }).to_string(),
+                Err(_) => {
+                    return serde_json::json!({ "error": "Invalid UTF-8 in file" }).to_string()
+                }
             },
-            None => return serde_json::json!({ "error": format!("File not found: {}", path) }).to_string(),
+            None => {
+                return serde_json::json!({ "error": format!("File not found: {}", path) })
+                    .to_string()
+            }
         };
 
         self.parse_runefile(&content)
@@ -196,7 +201,7 @@ impl WasmBuilder {
                     BuildInstruction::Run { command, .. } => {
                         let layer_digest = Self::calculate_digest(command.as_bytes());
                         let layer_id = layer_digest[7..19].to_string();
-                        
+
                         layers.push(ImageLayer {
                             id: layer_id.clone(),
                             digest: layer_digest.clone(),
@@ -204,20 +209,20 @@ impl WasmBuilder {
                             created_by: format!("RUN {}", command),
                             empty_layer: false,
                         });
-                        
+
                         diff_ids.push(layer_digest);
                         (Some(layer_id), false)
                     }
                     BuildInstruction::Copy { src, dest, .. } => {
                         let mut layer_content = Vec::new();
-                        
+
                         for src_path in src {
                             let full_path = if src_path.starts_with('/') {
                                 src_path.clone()
                             } else {
                                 format!("{}/{}", config.context_dir, src_path)
                             };
-                            
+
                             if let Some(content) = self.fs.read_file_impl(&full_path) {
                                 layer_content.extend_from_slice(&content);
                             } else {
@@ -228,7 +233,7 @@ impl WasmBuilder {
                         if !layer_content.is_empty() {
                             let layer_digest = Self::calculate_digest(&layer_content);
                             let layer_id = layer_digest[7..19].to_string();
-                            
+
                             layers.push(ImageLayer {
                                 id: layer_id.clone(),
                                 digest: layer_digest.clone(),
@@ -236,7 +241,7 @@ impl WasmBuilder {
                                 created_by: format!("COPY {} {}", src.join(" "), dest),
                                 empty_layer: false,
                             });
-                            
+
                             diff_ids.push(layer_digest);
                             (Some(layer_id), false)
                         } else {
@@ -245,14 +250,14 @@ impl WasmBuilder {
                     }
                     BuildInstruction::Add { src, dest, .. } => {
                         let mut layer_content = Vec::new();
-                        
+
                         for src_path in src {
                             let full_path = if src_path.starts_with('/') {
                                 src_path.clone()
                             } else {
                                 format!("{}/{}", config.context_dir, src_path)
                             };
-                            
+
                             if let Some(content) = self.fs.read_file_impl(&full_path) {
                                 layer_content.extend_from_slice(&content);
                             }
@@ -261,7 +266,7 @@ impl WasmBuilder {
                         if !layer_content.is_empty() {
                             let layer_digest = Self::calculate_digest(&layer_content);
                             let layer_id = layer_digest[7..19].to_string();
-                            
+
                             layers.push(ImageLayer {
                                 id: layer_id.clone(),
                                 digest: layer_digest.clone(),
@@ -269,7 +274,7 @@ impl WasmBuilder {
                                 created_by: format!("ADD {} {}", src.join(" "), dest),
                                 empty_layer: false,
                             });
-                            
+
                             diff_ids.push(layer_digest);
                             (Some(layer_id), false)
                         } else {
@@ -297,15 +302,16 @@ impl WasmBuilder {
                         (None, true)
                     }
                     BuildInstruction::Expose { port, protocol } => {
-                        container_config.exposed_ports.insert(
-                            format!("{}/{}", port, protocol),
-                            serde_json::json!({}),
-                        );
+                        container_config
+                            .exposed_ports
+                            .insert(format!("{}/{}", port, protocol), serde_json::json!({}));
                         (None, true)
                     }
                     BuildInstruction::Volume { paths } => {
                         for path in paths {
-                            container_config.volumes.insert(path.clone(), serde_json::json!({}));
+                            container_config
+                                .volumes
+                                .insert(path.clone(), serde_json::json!({}));
                         }
                         (None, true)
                     }

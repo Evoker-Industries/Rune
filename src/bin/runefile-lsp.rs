@@ -50,7 +50,7 @@ fn main() {
         } else {
             // Process JSON-RPC message
             debug!("Received message: {}", line);
-            
+
             // Parse and handle the message
             // This is a simplified implementation
             if line.contains("\"method\":\"initialize\"") {
@@ -69,11 +69,7 @@ fn main() {
 }
 
 fn send_response(stdout: &mut io::Stdout, content: &str) {
-    let response = format!(
-        "Content-Length: {}\r\n\r\n{}",
-        content.len(),
-        content
-    );
+    let response = format!("Content-Length: {}\r\n\r\n{}", content.len(), content);
     let _ = stdout.write_all(response.as_bytes());
     let _ = stdout.flush();
 }

@@ -91,13 +91,16 @@ impl RunefileParser {
     fn parse_instruction(&mut self, line: &str, line_num: usize, has_from: &mut bool) {
         let trimmed = line.trim();
         let parts: Vec<&str> = trimmed.splitn(2, char::is_whitespace).collect();
-        
+
         if parts.is_empty() {
             return;
         }
 
         let keyword = parts[0].to_uppercase();
-        let arguments = parts.get(1).map(|s| s.trim().to_string()).unwrap_or_default();
+        let arguments = parts
+            .get(1)
+            .map(|s| s.trim().to_string())
+            .unwrap_or_default();
 
         let kind = match keyword.as_str() {
             "FROM" => {
@@ -155,14 +158,19 @@ impl RunefileParser {
             }
             InstructionKind::Copy | InstructionKind::Add => {
                 let args: Vec<&str> = arguments.split_whitespace().collect();
-                let non_flag_args: Vec<&&str> = args.iter()
-                    .filter(|a| !a.starts_with("--"))
-                    .collect();
+                let non_flag_args: Vec<&&str> =
+                    args.iter().filter(|a| !a.starts_with("--")).collect();
                 if non_flag_args.len() < 2 {
                     self.errors.push(ParseError {
                         line: line_num,
-                        message: format!("{} requires at least two arguments (source and destination)", 
-                            if kind == InstructionKind::Copy { "COPY" } else { "ADD" }),
+                        message: format!(
+                            "{} requires at least two arguments (source and destination)",
+                            if kind == InstructionKind::Copy {
+                                "COPY"
+                            } else {
+                                "ADD"
+                            }
+                        ),
                         severity: ErrorSeverity::Error,
                     });
                 }
@@ -195,7 +203,10 @@ impl RunefileParser {
                 }
             }
             InstructionKind::Healthcheck => {
-                if !arguments.is_empty() && !arguments.starts_with("NONE") && !arguments.starts_with("CMD") {
+                if !arguments.is_empty()
+                    && !arguments.starts_with("NONE")
+                    && !arguments.starts_with("CMD")
+                {
                     self.errors.push(ParseError {
                         line: line_num,
                         message: "HEALTHCHECK must be NONE or CMD".to_string(),
@@ -210,11 +221,19 @@ impl RunefileParser {
     /// Get diagnostics as JSON
     #[wasm_bindgen]
     pub fn get_diagnostics_json(&self) -> String {
-        let diagnostics: Vec<Diagnostic> = self.errors.iter().map(|e| {
-            Diagnostic {
+        let diagnostics: Vec<Diagnostic> = self
+            .errors
+            .iter()
+            .map(|e| Diagnostic {
                 range: Range {
-                    start: Position { line: e.line as u32, character: 0 },
-                    end: Position { line: e.line as u32, character: 100 },
+                    start: Position {
+                        line: e.line as u32,
+                        character: 0,
+                    },
+                    end: Position {
+                        line: e.line as u32,
+                        character: 100,
+                    },
                 },
                 severity: match e.severity {
                     ErrorSeverity::Error => 1,
@@ -224,8 +243,8 @@ impl RunefileParser {
                 },
                 message: e.message.clone(),
                 source: "runefile-lsp".to_string(),
-            }
-        }).collect();
+            })
+            .collect();
 
         serde_json::to_string(&diagnostics).unwrap_or_default()
     }

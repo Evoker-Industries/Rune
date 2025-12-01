@@ -179,10 +179,16 @@ impl CgroupManager {
             self.create_cgroup_dir(&memory_path)?;
 
             if let Some(limit) = config.memory_limit {
-                self.write_cgroup_file(&memory_path.join("memory.limit_in_bytes"), &limit.to_string())?;
+                self.write_cgroup_file(
+                    &memory_path.join("memory.limit_in_bytes"),
+                    &limit.to_string(),
+                )?;
             }
             if let Some(reservation) = config.memory_reservation {
-                self.write_cgroup_file(&memory_path.join("memory.soft_limit_in_bytes"), &reservation.to_string())?;
+                self.write_cgroup_file(
+                    &memory_path.join("memory.soft_limit_in_bytes"),
+                    &reservation.to_string(),
+                )?;
             }
             if config.oom_kill_disable {
                 self.write_cgroup_file(&memory_path.join("memory.oom_control"), "1")?;
@@ -251,9 +257,12 @@ impl CgroupManager {
         // This may fail if controllers are already enabled or not available
         if let Err(e) = self.write_cgroup_file(
             &self.rune_path.join("cgroup.subtree_control"),
-            "+cpu +memory +pids +io"
+            "+cpu +memory +pids +io",
         ) {
-            tracing::warn!("Failed to enable cgroup controllers (may already be enabled): {}", e);
+            tracing::warn!(
+                "Failed to enable cgroup controllers (may already be enabled): {}",
+                e
+            );
         }
 
         // Memory settings
@@ -267,7 +276,10 @@ impl CgroupManager {
             if swap_limit < 0 {
                 self.write_cgroup_file(&container_path.join("memory.swap.max"), "max")?;
             } else {
-                self.write_cgroup_file(&container_path.join("memory.swap.max"), &swap_limit.to_string())?;
+                self.write_cgroup_file(
+                    &container_path.join("memory.swap.max"),
+                    &swap_limit.to_string(),
+                )?;
             }
         }
 
@@ -275,10 +287,16 @@ impl CgroupManager {
         if let Some(cpus) = config.cpus {
             let period = config.cpu_period.unwrap_or(100_000);
             let quota = (cpus * period as f64) as u64;
-            self.write_cgroup_file(&container_path.join("cpu.max"), &format!("{} {}", quota, period))?;
+            self.write_cgroup_file(
+                &container_path.join("cpu.max"),
+                &format!("{} {}", quota, period),
+            )?;
         } else if let Some(quota) = config.cpu_quota {
             let period = config.cpu_period.unwrap_or(100_000);
-            self.write_cgroup_file(&container_path.join("cpu.max"), &format!("{} {}", quota, period))?;
+            self.write_cgroup_file(
+                &container_path.join("cpu.max"),
+                &format!("{} {}", quota, period),
+            )?;
         }
         if let Some(shares) = config.cpu_shares {
             // Convert shares to weight (shares 1024 = weight 100)
@@ -319,9 +337,13 @@ impl CgroupManager {
 
     fn add_process_v1(&self, container_id: &str, pid: u32) -> Result<()> {
         let controllers = ["memory", "cpu", "cpuset", "pids", "blkio"];
-        
+
         for controller in controllers {
-            let cgroup_path = self.base_path.join(controller).join("rune").join(container_id);
+            let cgroup_path = self
+                .base_path
+                .join(controller)
+                .join("rune")
+                .join(container_id);
             if cgroup_path.exists() {
                 let procs_file = cgroup_path.join("cgroup.procs");
                 if procs_file.exists() {
@@ -329,18 +351,18 @@ impl CgroupManager {
                 }
             }
         }
-        
+
         Ok(())
     }
 
     fn add_process_v2(&self, container_id: &str, pid: u32) -> Result<()> {
         let container_path = self.rune_path.join(container_id);
         let procs_file = container_path.join("cgroup.procs");
-        
+
         if procs_file.exists() {
             self.write_cgroup_file(&procs_file, &pid.to_string())?;
         }
-        
+
         Ok(())
     }
 
@@ -354,14 +376,18 @@ impl CgroupManager {
 
     fn remove_v1(&self, container_id: &str) -> Result<()> {
         let controllers = ["memory", "cpu", "cpuset", "pids", "blkio"];
-        
+
         for controller in controllers {
-            let cgroup_path = self.base_path.join(controller).join("rune").join(container_id);
+            let cgroup_path = self
+                .base_path
+                .join(controller)
+                .join("rune")
+                .join(container_id);
             if cgroup_path.exists() {
                 let _ = fs::remove_dir(&cgroup_path);
             }
         }
-        
+
         Ok(())
     }
 
@@ -412,10 +438,12 @@ impl CgroupManager {
 
     fn get_memory_stats_v1(&self, container_id: &str) -> Result<MemoryStats> {
         let memory_path = self.base_path.join("memory/rune").join(container_id);
-        
+
         let usage = self.read_cgroup_u64(&memory_path.join("memory.usage_in_bytes"))?;
         let limit = self.read_cgroup_u64(&memory_path.join("memory.limit_in_bytes"))?;
-        let max_usage = self.read_cgroup_u64(&memory_path.join("memory.max_usage_in_bytes")).unwrap_or(0);
+        let max_usage = self
+            .read_cgroup_u64(&memory_path.join("memory.max_usage_in_bytes"))
+            .unwrap_or(0);
 
         Ok(MemoryStats {
             usage,
@@ -426,7 +454,7 @@ impl CgroupManager {
 
     fn get_memory_stats_v2(&self, container_id: &str) -> Result<MemoryStats> {
         let container_path = self.rune_path.join(container_id);
-        
+
         let usage = self.read_cgroup_u64(&container_path.join("memory.current"))?;
         let limit_str = fs::read_to_string(container_path.join("memory.max"))
             .map_err(|e| RuneError::Runtime(format!("Failed to read memory.max: {}", e)))?;
@@ -435,7 +463,9 @@ impl CgroupManager {
         } else {
             limit_str.trim().parse().unwrap_or(u64::MAX)
         };
-        let max_usage = self.read_cgroup_u64(&container_path.join("memory.peak")).unwrap_or(0);
+        let max_usage = self
+            .read_cgroup_u64(&container_path.join("memory.peak"))
+            .unwrap_or(0);
 
         Ok(MemoryStats {
             usage,
@@ -447,31 +477,35 @@ impl CgroupManager {
     /// Create cgroup directory
     fn create_cgroup_dir(&self, path: &Path) -> Result<()> {
         if !path.exists() {
-            fs::create_dir_all(path)
-                .map_err(|e| RuneError::Runtime(format!("Failed to create cgroup directory: {}", e)))?;
+            fs::create_dir_all(path).map_err(|e| {
+                RuneError::Runtime(format!("Failed to create cgroup directory: {}", e))
+            })?;
         }
         Ok(())
     }
 
     /// Write to a cgroup file
     fn write_cgroup_file(&self, path: &Path, value: &str) -> Result<()> {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .open(path)
-            .map_err(|e| RuneError::Runtime(format!("Failed to open cgroup file {:?}: {}", path, e)))?;
-        
-        file.write_all(value.as_bytes())
-            .map_err(|e| RuneError::Runtime(format!("Failed to write cgroup file {:?}: {}", path, e)))?;
-        
+        let mut file = OpenOptions::new().write(true).open(path).map_err(|e| {
+            RuneError::Runtime(format!("Failed to open cgroup file {:?}: {}", path, e))
+        })?;
+
+        file.write_all(value.as_bytes()).map_err(|e| {
+            RuneError::Runtime(format!("Failed to write cgroup file {:?}: {}", path, e))
+        })?;
+
         Ok(())
     }
 
     /// Read a u64 from a cgroup file
     fn read_cgroup_u64(&self, path: &Path) -> Result<u64> {
-        let content = fs::read_to_string(path)
-            .map_err(|e| RuneError::Runtime(format!("Failed to read cgroup file {:?}: {}", path, e)))?;
-        
-        content.trim().parse()
+        let content = fs::read_to_string(path).map_err(|e| {
+            RuneError::Runtime(format!("Failed to read cgroup file {:?}: {}", path, e))
+        })?;
+
+        content
+            .trim()
+            .parse()
             .map_err(|e| RuneError::Runtime(format!("Failed to parse cgroup value: {}", e)))
     }
 }

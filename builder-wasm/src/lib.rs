@@ -72,7 +72,11 @@ pub fn calculate_digest(content: &[u8]) -> String {
 pub fn generate_id() -> String {
     let timestamp = js_sys::Date::now() as u64;
     let random = js_sys::Math::random();
-    format!("{:016x}{:08x}", timestamp, (random * u32::MAX as f64) as u32)
+    format!(
+        "{:016x}{:08x}",
+        timestamp,
+        (random * u32::MAX as f64) as u32
+    )
 }
 
 /// Get current timestamp as ISO string (works offline)

@@ -92,9 +92,7 @@ pub fn unshare(flags: i32) -> SyscallResult<()> {
 
 /// Set the hostname
 pub fn sethostname(name: &str) -> SyscallResult<()> {
-    let result = unsafe {
-        libc::sethostname(name.as_ptr() as *const libc::c_char, name.len())
-    };
+    let result = unsafe { libc::sethostname(name.as_ptr() as *const libc::c_char, name.len()) };
     if result < 0 {
         Err(io::Error::last_os_error())
     } else {
@@ -104,9 +102,7 @@ pub fn sethostname(name: &str) -> SyscallResult<()> {
 
 /// Set the domain name
 pub fn setdomainname(name: &str) -> SyscallResult<()> {
-    let result = unsafe {
-        libc::setdomainname(name.as_ptr() as *const libc::c_char, name.len())
-    };
+    let result = unsafe { libc::setdomainname(name.as_ptr() as *const libc::c_char, name.len()) };
     if result < 0 {
         Err(io::Error::last_os_error())
     } else {
@@ -124,17 +120,33 @@ pub fn mount(
 ) -> SyscallResult<()> {
     use std::ffi::CString;
 
-    let source_cstr = source.map(|s| CString::new(s)).transpose()
+    let source_cstr = source
+        .map(|s| CString::new(s))
+        .transpose()
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid source path"))?;
-    let target_cstr = CString::new(target).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid target path"))?;
-    let fstype_cstr = fstype.map(|s| CString::new(s)).transpose()
+    let target_cstr = CString::new(target)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid target path"))?;
+    let fstype_cstr = fstype
+        .map(|s| CString::new(s))
+        .transpose()
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid fstype"))?;
-    let data_cstr = data.map(|s| CString::new(s)).transpose()
+    let data_cstr = data
+        .map(|s| CString::new(s))
+        .transpose()
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid data"))?;
 
-    let source_ptr = source_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(std::ptr::null());
-    let fstype_ptr = fstype_cstr.as_ref().map(|s| s.as_ptr()).unwrap_or(std::ptr::null());
-    let data_ptr = data_cstr.as_ref().map(|s| s.as_ptr() as *const libc::c_void).unwrap_or(std::ptr::null());
+    let source_ptr = source_cstr
+        .as_ref()
+        .map(|s| s.as_ptr())
+        .unwrap_or(std::ptr::null());
+    let fstype_ptr = fstype_cstr
+        .as_ref()
+        .map(|s| s.as_ptr())
+        .unwrap_or(std::ptr::null());
+    let data_ptr = data_cstr
+        .as_ref()
+        .map(|s| s.as_ptr() as *const libc::c_void)
+        .unwrap_or(std::ptr::null());
 
     let result = unsafe {
         libc::mount(
@@ -157,7 +169,8 @@ pub fn mount(
 pub fn umount2(target: &str, flags: i32) -> SyscallResult<()> {
     use std::ffi::CString;
 
-    let target_cstr = CString::new(target).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid target path"))?;
+    let target_cstr = CString::new(target)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid target path"))?;
 
     let result = unsafe { libc::umount2(target_cstr.as_ptr(), flags) };
 
@@ -172,8 +185,10 @@ pub fn umount2(target: &str, flags: i32) -> SyscallResult<()> {
 pub fn pivot_root(new_root: &str, put_old: &str) -> SyscallResult<()> {
     use std::ffi::CString;
 
-    let new_root_cstr = CString::new(new_root).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid new_root path"))?;
-    let put_old_cstr = CString::new(put_old).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid put_old path"))?;
+    let new_root_cstr = CString::new(new_root)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid new_root path"))?;
+    let put_old_cstr = CString::new(put_old)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid put_old path"))?;
 
     // pivot_root is not directly in libc, use syscall
     let result = unsafe {
@@ -195,7 +210,8 @@ pub fn pivot_root(new_root: &str, put_old: &str) -> SyscallResult<()> {
 pub fn chroot(path: &str) -> SyscallResult<()> {
     use std::ffi::CString;
 
-    let path_cstr = CString::new(path).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid path"))?;
+    let path_cstr = CString::new(path)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid path"))?;
 
     let result = unsafe { libc::chroot(path_cstr.as_ptr()) };
 
@@ -210,7 +226,8 @@ pub fn chroot(path: &str) -> SyscallResult<()> {
 pub fn chdir(path: &str) -> SyscallResult<()> {
     use std::ffi::CString;
 
-    let path_cstr = CString::new(path).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid path"))?;
+    let path_cstr = CString::new(path)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid path"))?;
 
     let result = unsafe { libc::chdir(path_cstr.as_ptr()) };
 
@@ -254,33 +271,24 @@ pub fn fork() -> SyscallResult<u32> {
 pub fn execve(path: &str, args: &[&str], env: &[&str]) -> SyscallResult<()> {
     use std::ffi::CString;
 
-    let path_cstr = CString::new(path).map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid path"))?;
-    
-    let args_cstr: std::result::Result<Vec<CString>, _> = args.iter()
-        .map(|s| CString::new(*s))
-        .collect();
-    let args_cstr = args_cstr.map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid argument"))?;
-    let mut args_ptr: Vec<*const libc::c_char> = args_cstr.iter()
-        .map(|s| s.as_ptr())
-        .collect();
+    let path_cstr = CString::new(path)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid path"))?;
+
+    let args_cstr: std::result::Result<Vec<CString>, _> =
+        args.iter().map(|s| CString::new(*s)).collect();
+    let args_cstr =
+        args_cstr.map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid argument"))?;
+    let mut args_ptr: Vec<*const libc::c_char> = args_cstr.iter().map(|s| s.as_ptr()).collect();
     args_ptr.push(std::ptr::null());
 
-    let env_cstr: std::result::Result<Vec<CString>, _> = env.iter()
-        .map(|s| CString::new(*s))
-        .collect();
-    let env_cstr = env_cstr.map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid environment variable"))?;
-    let mut env_ptr: Vec<*const libc::c_char> = env_cstr.iter()
-        .map(|s| s.as_ptr())
-        .collect();
+    let env_cstr: std::result::Result<Vec<CString>, _> =
+        env.iter().map(|s| CString::new(*s)).collect();
+    let env_cstr = env_cstr
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid environment variable"))?;
+    let mut env_ptr: Vec<*const libc::c_char> = env_cstr.iter().map(|s| s.as_ptr()).collect();
     env_ptr.push(std::ptr::null());
 
-    let result = unsafe {
-        libc::execve(
-            path_cstr.as_ptr(),
-            args_ptr.as_ptr(),
-            env_ptr.as_ptr(),
-        )
-    };
+    let result = unsafe { libc::execve(path_cstr.as_ptr(), args_ptr.as_ptr(), env_ptr.as_ptr()) };
 
     // execve only returns on error
     if result < 0 {

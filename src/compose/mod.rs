@@ -4,9 +4,9 @@
 //! application orchestration.
 
 pub mod config;
-pub mod parser;
 pub mod orchestrator;
+pub mod parser;
 
 pub use config::{ComposeConfig, ServiceConfig};
-pub use parser::ComposeParser;
 pub use orchestrator::ComposeOrchestrator;
+pub use parser::ComposeParser;

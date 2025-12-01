@@ -34,7 +34,9 @@ impl RunefileParser {
         match Self::parse_content(content) {
             Ok(parsed) => {
                 if parsed.stages.is_empty() {
-                    errors.push("Runefile must have at least one stage (FROM instruction)".to_string());
+                    errors.push(
+                        "Runefile must have at least one stage (FROM instruction)".to_string(),
+                    );
                 }
 
                 for (i, stage) in parsed.stages.iter().enumerate() {
@@ -67,7 +69,10 @@ impl RunefileParser {
                             }
                             BuildInstruction::Workdir { path } => {
                                 if !path.starts_with('/') && !path.starts_with('$') {
-                                    warnings.push(format!("WORKDIR '{}' should be an absolute path", path));
+                                    warnings.push(format!(
+                                        "WORKDIR '{}' should be an absolute path",
+                                        path
+                                    ));
                                 }
                             }
                             _ => {}
@@ -191,7 +196,10 @@ impl RunefileParser {
                 signal: args.to_string(),
             }),
             "SHELL" => Self::parse_shell(args, line_num),
-            _ => Err(format!("Line {}: Unknown instruction: {}", line_num, instruction)),
+            _ => Err(format!(
+                "Line {}: Unknown instruction: {}",
+                line_num, instruction
+            )),
         }
     }
 
@@ -370,9 +378,9 @@ impl RunefileParser {
 
     fn parse_expose(args: &str, line_num: usize) -> Result<BuildInstruction, String> {
         let parts: Vec<&str> = args.split('/').collect();
-        let port: u16 = parts[0].parse().map_err(|_| {
-            format!("Line {}: Invalid port number: {}", line_num, parts[0])
-        })?;
+        let port: u16 = parts[0]
+            .parse()
+            .map_err(|_| format!("Line {}: Invalid port number: {}", line_num, parts[0]))?;
         let protocol = parts.get(1).unwrap_or(&"tcp").to_string();
 
         Ok(BuildInstruction::Expose { port, protocol })
@@ -382,9 +390,7 @@ impl RunefileParser {
         let paths = if args.starts_with('[') {
             serde_json::from_str(args).unwrap_or_default()
         } else {
-            args.split_whitespace()
-                .map(|s| s.to_string())
-                .collect()
+            args.split_whitespace().map(|s| s.to_string()).collect()
         };
 
         Ok(BuildInstruction::Volume { paths })
@@ -450,9 +456,8 @@ impl RunefileParser {
     }
 
     fn parse_shell(args: &str, line_num: usize) -> Result<BuildInstruction, String> {
-        let shell: Vec<String> = serde_json::from_str(args).map_err(|_| {
-            format!("Line {}: SHELL requires JSON array format", line_num)
-        })?;
+        let shell: Vec<String> = serde_json::from_str(args)
+            .map_err(|_| format!("Line {}: SHELL requires JSON array format", line_num))?;
 
         Ok(BuildInstruction::Shell { shell })
     }

@@ -1,7 +1,7 @@
 //! Completion Provider for Runefile LSP
 
-use super::syntax::{RunefileParser, InstructionKind};
 use super::server::CompletionItem;
+use super::syntax::{InstructionKind, RunefileParser};
 
 /// Completion provider for Runefile
 pub struct CompletionProvider {
@@ -57,7 +57,8 @@ impl CompletionProvider {
         // Partial instruction name
         let upper = trimmed.to_uppercase();
         if !trimmed.contains(' ') {
-            return self.instruction_completions(snippet_support)
+            return self
+                .instruction_completions(snippet_support)
                 .into_iter()
                 .filter(|item| item.label.starts_with(&upper))
                 .collect();
@@ -141,7 +142,9 @@ impl CompletionProvider {
                 label: "AS".to_string(),
                 kind: Some(14), // Keyword
                 detail: Some("Name this build stage".to_string()),
-                documentation: Some("Create a named build stage for multi-stage builds".to_string()),
+                documentation: Some(
+                    "Create a named build stage for multi-stage builds".to_string(),
+                ),
                 insert_text: Some("AS ".to_string()),
                 insert_text_format: Some(1),
             });
@@ -207,13 +210,19 @@ impl CompletionProvider {
 
         // Common package managers and commands
         let commands = [
-            ("apt-get update && apt-get install -y", "Update and install packages (Debian/Ubuntu)"),
+            (
+                "apt-get update && apt-get install -y",
+                "Update and install packages (Debian/Ubuntu)",
+            ),
             ("apk add --no-cache", "Install packages (Alpine)"),
             ("yum install -y", "Install packages (RHEL/CentOS)"),
             ("dnf install -y", "Install packages (Fedora)"),
             ("pip install", "Install Python packages"),
             ("npm install", "Install Node.js packages"),
-            ("cargo build --release", "Build Rust project in release mode"),
+            (
+                "cargo build --release",
+                "Build Rust project in release mode",
+            ),
             ("go build -o", "Build Go binary"),
             ("chmod +x", "Make file executable"),
             ("mkdir -p", "Create directory with parents"),
@@ -281,7 +290,9 @@ impl CompletionProvider {
                 label: "NONE".to_string(),
                 kind: Some(14),
                 detail: Some("Disable healthcheck".to_string()),
-                documentation: Some("Disable any healthcheck inherited from the base image".to_string()),
+                documentation: Some(
+                    "Disable any healthcheck inherited from the base image".to_string(),
+                ),
                 insert_text: Some("NONE".to_string()),
                 insert_text_format: Some(1),
             });
@@ -416,7 +427,7 @@ mod tests {
     fn test_instruction_completions() {
         let provider = CompletionProvider::new();
         let completions = provider.instruction_completions(false);
-        
+
         assert!(!completions.is_empty());
         assert!(completions.iter().any(|c| c.label == "FROM"));
         assert!(completions.iter().any(|c| c.label == "RUN"));
@@ -427,7 +438,7 @@ mod tests {
     fn test_healthcheck_completions() {
         let provider = CompletionProvider::new();
         let completions = provider.healthcheck_completions("", false);
-        
+
         assert!(completions.iter().any(|c| c.label == "--interval"));
         assert!(completions.iter().any(|c| c.label == "--timeout"));
         assert!(completions.iter().any(|c| c.label == "CMD"));

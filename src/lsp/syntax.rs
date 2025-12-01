@@ -58,7 +58,8 @@ impl InstructionKind {
     /// Get documentation for this instruction
     pub fn documentation(&self) -> &'static str {
         match self {
-            Self::From => r#"FROM - Set the base image for subsequent instructions.
+            Self::From => {
+                r#"FROM - Set the base image for subsequent instructions.
 
 Usage:
   FROM [--platform=<platform>] <image> [AS <name>]
@@ -68,9 +69,11 @@ Usage:
 Example:
   FROM ubuntu:22.04
   FROM rust:1.70 AS builder
-  FROM --platform=linux/amd64 alpine:latest"#,
+  FROM --platform=linux/amd64 alpine:latest"#
+            }
 
-            Self::Run => r#"RUN - Execute commands in a new layer on top of the current image.
+            Self::Run => {
+                r#"RUN - Execute commands in a new layer on top of the current image.
 
 Usage:
   RUN <command>                    # Shell form
@@ -78,9 +81,11 @@ Usage:
 
 Example:
   RUN apt-get update && apt-get install -y curl
-  RUN ["apt-get", "install", "-y", "nginx"]"#,
+  RUN ["apt-get", "install", "-y", "nginx"]"#
+            }
 
-            Self::Cmd => r#"CMD - Provide defaults for an executing container.
+            Self::Cmd => {
+                r#"CMD - Provide defaults for an executing container.
 
 Usage:
   CMD ["executable","param1","param2"]  # Exec form (preferred)
@@ -89,9 +94,11 @@ Usage:
 
 Example:
   CMD ["nginx", "-g", "daemon off;"]
-  CMD echo "Hello World""#,
+  CMD echo "Hello World""#
+            }
 
-            Self::Label => r#"LABEL - Add metadata to an image.
+            Self::Label => {
+                r#"LABEL - Add metadata to an image.
 
 Usage:
   LABEL <key>=<value> <key>=<value> ...
@@ -99,9 +106,11 @@ Usage:
 Example:
   LABEL version="1.0"
   LABEL maintainer="user@example.com"
-  LABEL org.opencontainers.image.source="https://github.com/example/repo""#,
+  LABEL org.opencontainers.image.source="https://github.com/example/repo""#
+            }
 
-            Self::Expose => r#"EXPOSE - Inform Docker that the container listens on specified ports.
+            Self::Expose => {
+                r#"EXPOSE - Inform Docker that the container listens on specified ports.
 
 Usage:
   EXPOSE <port> [<port>/<protocol>...]
@@ -109,9 +118,11 @@ Usage:
 Example:
   EXPOSE 80
   EXPOSE 80/tcp 443/tcp
-  EXPOSE 8080/udp"#,
+  EXPOSE 8080/udp"#
+            }
 
-            Self::Env => r#"ENV - Set environment variables.
+            Self::Env => {
+                r#"ENV - Set environment variables.
 
 Usage:
   ENV <key>=<value> ...
@@ -120,9 +131,11 @@ Usage:
 Example:
   ENV MY_VAR=value
   ENV PATH="/usr/local/bin:$PATH"
-  ENV NODE_ENV=production PORT=3000"#,
+  ENV NODE_ENV=production PORT=3000"#
+            }
 
-            Self::Add => r#"ADD - Copy files, directories, or remote URLs to the image.
+            Self::Add => {
+                r#"ADD - Copy files, directories, or remote URLs to the image.
 
 Usage:
   ADD [--chown=<user>:<group>] [--chmod=<perms>] <src>... <dest>
@@ -131,9 +144,11 @@ Usage:
 Example:
   ADD app.tar.gz /app/
   ADD --chown=node:node package*.json ./
-  ADD https://example.com/file.txt /app/"#,
+  ADD https://example.com/file.txt /app/"#
+            }
 
-            Self::Copy => r#"COPY - Copy files or directories to the image.
+            Self::Copy => {
+                r#"COPY - Copy files or directories to the image.
 
 Usage:
   COPY [--chown=<user>:<group>] [--chmod=<perms>] <src>... <dest>
@@ -143,9 +158,11 @@ Usage:
 Example:
   COPY . /app
   COPY --from=builder /app/target/release/myapp /usr/local/bin/
-  COPY --chown=1000:1000 config.json /etc/app/"#,
+  COPY --chown=1000:1000 config.json /etc/app/"#
+            }
 
-            Self::Entrypoint => r#"ENTRYPOINT - Configure a container to run as an executable.
+            Self::Entrypoint => {
+                r#"ENTRYPOINT - Configure a container to run as an executable.
 
 Usage:
   ENTRYPOINT ["executable", "param1", "param2"]  # Exec form (preferred)
@@ -153,9 +170,11 @@ Usage:
 
 Example:
   ENTRYPOINT ["docker-entrypoint.sh"]
-  ENTRYPOINT ["/usr/bin/myapp"]"#,
+  ENTRYPOINT ["/usr/bin/myapp"]"#
+            }
 
-            Self::Volume => r#"VOLUME - Create a mount point for external volumes.
+            Self::Volume => {
+                r#"VOLUME - Create a mount point for external volumes.
 
 Usage:
   VOLUME ["/data"]
@@ -163,9 +182,11 @@ Usage:
 
 Example:
   VOLUME /var/log
-  VOLUME ["/data", "/config"]"#,
+  VOLUME ["/data", "/config"]"#
+            }
 
-            Self::User => r#"USER - Set the user for subsequent instructions and container runtime.
+            Self::User => {
+                r#"USER - Set the user for subsequent instructions and container runtime.
 
 Usage:
   USER <user>[:<group>]
@@ -174,18 +195,22 @@ Usage:
 Example:
   USER node
   USER 1000:1000
-  USER www-data:www-data"#,
+  USER www-data:www-data"#
+            }
 
-            Self::Workdir => r#"WORKDIR - Set the working directory for subsequent instructions.
+            Self::Workdir => {
+                r#"WORKDIR - Set the working directory for subsequent instructions.
 
 Usage:
   WORKDIR /path/to/workdir
 
 Example:
   WORKDIR /app
-  WORKDIR /home/user/project"#,
+  WORKDIR /home/user/project"#
+            }
 
-            Self::Arg => r#"ARG - Define a build-time variable.
+            Self::Arg => {
+                r#"ARG - Define a build-time variable.
 
 Usage:
   ARG <name>[=<default value>]
@@ -193,18 +218,22 @@ Usage:
 Example:
   ARG VERSION=latest
   ARG NODE_VERSION
-  ARG BUILD_DATE"#,
+  ARG BUILD_DATE"#
+            }
 
-            Self::Onbuild => r#"ONBUILD - Add a trigger instruction for when the image is used as a base.
+            Self::Onbuild => {
+                r#"ONBUILD - Add a trigger instruction for when the image is used as a base.
 
 Usage:
   ONBUILD <INSTRUCTION>
 
 Example:
   ONBUILD COPY . /app
-  ONBUILD RUN npm install"#,
+  ONBUILD RUN npm install"#
+            }
 
-            Self::Stopsignal => r#"STOPSIGNAL - Set the system call signal for container exit.
+            Self::Stopsignal => {
+                r#"STOPSIGNAL - Set the system call signal for container exit.
 
 Usage:
   STOPSIGNAL signal
@@ -212,9 +241,11 @@ Usage:
 Example:
   STOPSIGNAL SIGTERM
   STOPSIGNAL SIGKILL
-  STOPSIGNAL 9"#,
+  STOPSIGNAL 9"#
+            }
 
-            Self::Healthcheck => r#"HEALTHCHECK - Tell Docker how to test if the container is still working.
+            Self::Healthcheck => {
+                r#"HEALTHCHECK - Tell Docker how to test if the container is still working.
 
 Usage:
   HEALTHCHECK [OPTIONS] CMD command
@@ -230,18 +261,22 @@ Options:
 Example:
   HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost/ || exit 1
   HEALTHCHECK --interval=5m --timeout=3s CMD wget --spider http://localhost:8080/health
-  HEALTHCHECK NONE"#,
+  HEALTHCHECK NONE"#
+            }
 
-            Self::Shell => r#"SHELL - Override the default shell for shell form commands.
+            Self::Shell => {
+                r#"SHELL - Override the default shell for shell form commands.
 
 Usage:
   SHELL ["executable", "parameters"]
 
 Example:
   SHELL ["/bin/bash", "-c"]
-  SHELL ["powershell", "-command"]"#,
+  SHELL ["powershell", "-command"]"#
+            }
 
-            Self::Maintainer => r#"MAINTAINER - Set the author of the image (deprecated, use LABEL instead).
+            Self::Maintainer => {
+                r#"MAINTAINER - Set the author of the image (deprecated, use LABEL instead).
 
 Usage:
   MAINTAINER <name>
@@ -250,7 +285,8 @@ Example:
   MAINTAINER John Doe <john@example.com>
 
 Note: This instruction is deprecated. Use LABEL instead:
-  LABEL maintainer="john@example.com""#,
+  LABEL maintainer="john@example.com""#
+            }
 
             Self::Comment => "Comment line starting with #",
 
@@ -276,7 +312,9 @@ Note: This instruction is deprecated. Use LABEL instead:
             Self::Arg => "ARG ${1:name}=${2:default}",
             Self::Onbuild => "ONBUILD ${1:INSTRUCTION}",
             Self::Stopsignal => "STOPSIGNAL ${1:SIGTERM}",
-            Self::Healthcheck => "HEALTHCHECK --interval=${1:30s} --timeout=${2:3s} CMD ${3:command}",
+            Self::Healthcheck => {
+                "HEALTHCHECK --interval=${1:30s} --timeout=${2:3s} CMD ${3:command}"
+            }
             Self::Shell => r#"SHELL ["${1:/bin/bash}", "${2:-c}"]"#,
             Self::Maintainer => "MAINTAINER ${1:name}",
             _ => "",
@@ -451,7 +489,8 @@ impl RunefileParser {
         let keyword_end = keyword_start + keyword.len();
 
         let arguments_span = if !arguments.is_empty() {
-            let arg_start = line[keyword_end..].find(|c: char| !c.is_whitespace())
+            let arg_start = line[keyword_end..]
+                .find(|c: char| !c.is_whitespace())
                 .map(|i| keyword_end + i)
                 .unwrap_or(keyword_end);
             Some((arg_start, line.len()))
@@ -489,7 +528,8 @@ impl RunefileParser {
 
     fn parse_arg(&mut self, arguments: &str) {
         if let Some((name, default)) = arguments.split_once('=') {
-            self.args.insert(name.trim().to_string(), Some(default.trim().to_string()));
+            self.args
+                .insert(name.trim().to_string(), Some(default.trim().to_string()));
         } else {
             self.args.insert(arguments.trim().to_string(), None);
         }
@@ -500,7 +540,8 @@ impl RunefileParser {
         if arguments.contains('=') {
             for pair in arguments.split_whitespace() {
                 if let Some((key, value)) = pair.split_once('=') {
-                    self.envs.insert(key.to_string(), value.trim_matches('"').to_string());
+                    self.envs
+                        .insert(key.to_string(), value.trim_matches('"').to_string());
                 }
             }
         } else {
@@ -514,7 +555,8 @@ impl RunefileParser {
     fn parse_label(&mut self, arguments: &str) {
         for pair in arguments.split_whitespace() {
             if let Some((key, value)) = pair.split_once('=') {
-                self.labels.insert(key.to_string(), value.trim_matches('"').to_string());
+                self.labels
+                    .insert(key.to_string(), value.trim_matches('"').to_string());
             }
         }
     }
@@ -533,7 +575,10 @@ impl RunefileParser {
     /// Validate the parsed Runefile
     fn validate(&mut self) {
         // Check for FROM instruction
-        let has_from = self.instructions.iter().any(|i| i.kind == InstructionKind::From);
+        let has_from = self
+            .instructions
+            .iter()
+            .any(|i| i.kind == InstructionKind::From);
         if !has_from {
             self.errors.push(ParseError {
                 message: "Runefile must have at least one FROM instruction".to_string(),
@@ -544,9 +589,11 @@ impl RunefileParser {
         }
 
         // Check FROM is first (excluding ARG and comments)
-        let first_non_arg = self.instructions.iter()
+        let first_non_arg = self
+            .instructions
+            .iter()
             .find(|i| i.kind != InstructionKind::Arg && i.kind != InstructionKind::Comment);
-        
+
         if let Some(inst) = first_non_arg {
             if inst.kind != InstructionKind::From {
                 self.errors.push(ParseError {
@@ -562,7 +609,8 @@ impl RunefileParser {
         for inst in &self.instructions {
             if inst.kind == InstructionKind::Maintainer {
                 self.errors.push(ParseError {
-                    message: "MAINTAINER is deprecated, use LABEL maintainer=\"...\" instead".to_string(),
+                    message: "MAINTAINER is deprecated, use LABEL maintainer=\"...\" instead"
+                        .to_string(),
                     line: inst.line,
                     column: inst.column,
                     severity: ErrorSeverity::Warning,
@@ -571,12 +619,15 @@ impl RunefileParser {
         }
 
         // Check for multiple CMD instructions
-        let cmd_count = self.instructions.iter()
+        let cmd_count = self
+            .instructions
+            .iter()
             .filter(|i| i.kind == InstructionKind::Cmd)
             .count();
         if cmd_count > 1 {
             self.errors.push(ParseError {
-                message: "Multiple CMD instructions found; only the last one will be used".to_string(),
+                message: "Multiple CMD instructions found; only the last one will be used"
+                    .to_string(),
                 line: 0,
                 column: 0,
                 severity: ErrorSeverity::Warning,
@@ -584,18 +635,19 @@ impl RunefileParser {
         }
 
         // Check for HEALTHCHECK issues
-        let healthcheck_issues: Vec<ParseError> = self.instructions
+        let healthcheck_issues: Vec<ParseError> = self
+            .instructions
             .iter()
             .filter(|inst| inst.kind == InstructionKind::Healthcheck)
             .filter_map(|inst| Self::check_healthcheck(inst))
             .collect();
-        
+
         self.errors.extend(healthcheck_issues);
     }
 
     fn check_healthcheck(inst: &Instruction) -> Option<ParseError> {
         let args = inst.arguments.to_uppercase();
-        
+
         // HEALTHCHECK NONE is valid
         if args.trim() == "NONE" {
             return None;
@@ -610,7 +662,7 @@ impl RunefileParser {
                 severity: ErrorSeverity::Error,
             });
         }
-        
+
         None
     }
 
@@ -670,7 +722,9 @@ HEALTHCHECK --interval=30s --timeout=3s CMD curl -f http://localhost/ || exit 1
         parser.parse(content);
 
         assert!(parser.errors.is_empty());
-        let healthcheck = parser.instructions.iter()
+        let healthcheck = parser
+            .instructions
+            .iter()
             .find(|i| i.kind == InstructionKind::Healthcheck);
         assert!(healthcheck.is_some());
     }
@@ -718,9 +772,9 @@ MAINTAINER John Doe
         let mut parser = RunefileParser::new();
         parser.parse(content);
 
-        assert!(parser.errors.iter().any(|e| 
-            e.severity == ErrorSeverity::Warning && 
-            e.message.contains("deprecated")
-        ));
+        assert!(parser
+            .errors
+            .iter()
+            .any(|e| e.severity == ErrorSeverity::Warning && e.message.contains("deprecated")));
     }
 }
