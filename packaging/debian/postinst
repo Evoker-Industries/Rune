@@ -8,11 +8,6 @@ case "$1" in
             groupadd --system rune
         fi
 
-        # Set permissions on socket directory
-        if [ -d /var/run ]; then
-            chown root:rune /var/run 2>/dev/null || true
-        fi
-
         # Enable and start the socket
         if [ -d /run/systemd/system ]; then
             systemctl daemon-reload >/dev/null || true

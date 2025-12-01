@@ -107,6 +107,6 @@ pub enum RuneError {
     #[error("API error: {0}")]
     Api(String),
 
-    #[error("Healthcheck failed: {0}")]
+    #[error("Health check failed: {0}")]
     Healthcheck(String),
 }

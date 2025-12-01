@@ -205,8 +205,12 @@ impl ApiHandler {
     }
 
     fn get_info(&self) -> Result<String> {
-        let containers = self.container_manager.count().unwrap_or(0) as i64;
-        let running = self.container_manager.running_count().unwrap_or(0) as i64;
+        let containers = self.container_manager.count()
+            .map_err(|e| tracing::warn!("Failed to count containers: {}", e))
+            .unwrap_or(0) as i64;
+        let running = self.container_manager.running_count()
+            .map_err(|e| tracing::warn!("Failed to count running containers: {}", e))
+            .unwrap_or(0) as i64;
 
         let response = InfoResponse {
             id: uuid::Uuid::new_v4().to_string(),

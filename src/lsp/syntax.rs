@@ -375,19 +375,14 @@ impl RunefileParser {
                 continue;
             }
 
-            let full_line = if !continuation_buffer.is_empty() {
+            let (full_line, actual_line) = if !continuation_buffer.is_empty() {
                 continuation_buffer.push_str(trimmed);
                 let result = continuation_buffer.clone();
+                let start = continuation_start_line;
                 continuation_buffer.clear();
-                result
+                (result, start)
             } else {
-                trimmed.to_string()
-            };
-
-            let actual_line = if !continuation_buffer.is_empty() {
-                continuation_start_line
-            } else {
-                line_num
+                (trimmed.to_string(), line_num)
             };
 
             self.parse_line(&full_line, actual_line);

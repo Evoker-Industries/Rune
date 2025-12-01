@@ -1,7 +1,7 @@
 [Unit]
 Description=Rune Container Daemon
 Documentation=https://github.com/Evoker-Industries/Rune
-After=network-online.target firewalld.service containerd.service
+After=network-online.target firewalld.service
 Wants=network-online.target
 Requires=rune.socket
 
