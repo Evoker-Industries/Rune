@@ -1,0 +1,301 @@
+{
+  "repo_notes": [
+    {
+      "content": "A simple docker alternative"
+    }
+  ],
+  "pages": [
+    {
+      "title": "Overview",
+      "purpose": "Introduction to the Rune container runtime project, its goals, and overall architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Architecture",
+      "purpose": "High-level system architecture and how major components interact",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Docker API Compatibility",
+      "purpose": "How Rune provides Docker Engine API v1.24+ compatibility for tool integration",
+      "parent": "Architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "API Request Processing",
+      "purpose": "Detailed explanation of how API requests are parsed, routed, and handled",
+      "parent": "Architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Data Models and Serialization",
+      "purpose": "Docker-compatible request/response structures and JSON serialization patterns",
+      "parent": "Architecture",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Container Runtime",
+      "purpose": "The custom container runtime built directly on Linux kernel primitives",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Process Management",
+      "purpose": "How container processes are created, configured, and managed through their lifecycle",
+      "parent": "Container Runtime",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Namespace Isolation",
+      "purpose": "Linux namespace management for process, network, filesystem, and other isolation",
+      "parent": "Container Runtime",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Filesystem Isolation",
+      "purpose": "Mount management, rootfs setup, pivot_root, and filesystem isolation techniques",
+      "parent": "Container Runtime",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Resource Control (Cgroups)",
+      "purpose": "Cgroup v1 and v2 management for CPU, memory, PID, and I/O resource limits",
+      "parent": "Container Runtime",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "System Call Interface",
+      "purpose": "Low-level Linux system call bindings for container operations",
+      "parent": "Container Runtime",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Container Management",
+      "purpose": "Higher-level container lifecycle management and orchestration",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Container Lifecycle",
+      "purpose": "Container states, transitions, and lifecycle operations (start, stop, pause, remove)",
+      "parent": "Container Management",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Container Configuration",
+      "purpose": "ContainerConfig structure, port mappings, volume mounts, and resource limits",
+      "parent": "Container Management",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Image System",
+      "purpose": "Image building, storage, and distribution",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Image Building",
+      "purpose": "How Runefiles and Dockerfiles are parsed and built into OCI-compliant images",
+      "parent": "Image System",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Registry Client",
+      "purpose": "OCI Distribution Specification implementation for pulling and pushing images",
+      "parent": "Image System",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Registry Authentication",
+      "purpose": "Token-based authentication, user management, and permission system for registries",
+      "parent": "Image System",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Orchestration",
+      "purpose": "Docker Swarm and Compose compatibility for multi-container applications",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Docker Swarm Compatibility",
+      "purpose": "Swarm cluster management, services, tasks, and node orchestration",
+      "parent": "Orchestration",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Configuration Management",
+      "purpose": "Swarm config objects for non-sensitive configuration distribution",
+      "parent": "Orchestration",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "WASM Ecosystem",
+      "purpose": "WebAssembly components for browser-based container tooling",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "WASM Architecture",
+      "purpose": "Overview of WASM modules and their integration with JavaScript environments",
+      "parent": "WASM Ecosystem",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "WASM Image Builder",
+      "purpose": "Browser-based image building with virtual filesystem and progress callbacks",
+      "parent": "WASM Ecosystem",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Local Container Manager",
+      "purpose": "In-memory container simulation for offline development with localStorage persistence",
+      "parent": "WASM Ecosystem",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "WASM Language Server",
+      "purpose": "Browser-compatible LSP implementation for Runefile editing",
+      "parent": "WASM Ecosystem",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Developer Tools",
+      "purpose": "Language support and development tooling for Runefiles",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Language Server Protocol",
+      "purpose": "Native LSP implementation with document management and feature providers",
+      "parent": "Developer Tools",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Code Completion",
+      "purpose": "Context-aware completion for instructions, arguments, and stage names",
+      "parent": "Developer Tools",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    },
+    {
+      "title": "Hover Documentation",
+      "purpose": "Inline documentation and type information for Runefile elements",
+      "parent": "Developer Tools",
+      "page_notes": [
+        {
+          "content": ""
+        }
+      ]
+    }
+  ]
+}
